@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { format, subDays } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import {
   Eye, MousePointer, DollarSign, TrendingUp, Target, BarChart2,
   RefreshCw,
@@ -26,7 +26,7 @@ export default function AdPerformancePage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [platform, setPlatform] = useState('');
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const fetchData = useCallback(async () => {
@@ -48,29 +48,29 @@ export default function AdPerformancePage() {
   const { summary, perCampaign, spendOverTime } = data || {};
 
   const metricCards = [
-    { title: 'Impressions', value: formatNumber(summary?.impressions), icon: Eye, color: 'bg-blue-50 text-blue-600' },
-    { title: 'Clicks', value: formatNumber(summary?.clicks), icon: MousePointer, color: 'bg-purple-50 text-purple-600' },
-    { title: 'CTR', value: formatPercent(summary?.ctr * 100), icon: TrendingUp, color: 'bg-green-50 text-green-600' },
-    { title: 'CPC', value: formatCurrency(summary?.cpc), icon: Target, color: 'bg-orange-50 text-orange-600' },
-    { title: 'Total Spend', value: formatCurrency(summary?.spend), icon: DollarSign, color: 'bg-red-50 text-red-600' },
-    { title: 'Conversions', value: formatNumber(summary?.conversions), icon: BarChart2, color: 'bg-teal-50 text-teal-600' },
-    { title: 'Cost Per Lead', value: formatCurrency(summary?.costPerLead), icon: DollarSign, color: 'bg-yellow-50 text-yellow-600' },
+    { title: 'Impressions', value: formatNumber(summary?.impressions), icon: Eye, color: 'bg-red-50 text-red-600' },
+    { title: 'Clicks', value: formatNumber(summary?.clicks), icon: MousePointer, color: 'bg-red-100 text-red-700' },
+    { title: 'CTR', value: formatPercent(summary?.ctr * 100), icon: TrendingUp, color: 'bg-zinc-100 text-zinc-700' },
+    { title: 'CPC', value: formatCurrency(summary?.cpc), icon: Target, color: 'bg-red-50 text-red-500' },
+    { title: 'Total Spend', value: formatCurrency(summary?.spend), icon: DollarSign, color: 'bg-black text-white' },
+    { title: 'Conversions', value: formatNumber(summary?.conversions), icon: BarChart2, color: 'bg-zinc-200 text-zinc-800' },
+    { title: 'Cost Per Lead', value: formatCurrency(summary?.costPerLead), icon: DollarSign, color: 'bg-red-600 text-white' },
   ];
 
   return (
     <>
       <Header title="Ad Performance" subtitle="Metrics from Meta and Google Ads" />
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
 
         {/* Filters */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-wrap items-end gap-4">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Start Date</Label>
                 <Input
                   type="date"
-                  className="h-9 w-40"
+                  className="h-9 w-full sm:w-40"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
@@ -79,24 +79,25 @@ export default function AdPerformancePage() {
                 <Label className="text-xs">End Date</Label>
                 <Input
                   type="date"
-                  className="h-9 w-40"
+                  className="h-9 w-full sm:w-40"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 col-span-2 sm:col-span-1">
                 {PLATFORM_OPTIONS.map((opt) => (
                   <Button
                     key={opt.value}
                     size="sm"
                     variant={platform === opt.value ? 'default' : 'outline'}
                     onClick={() => setPlatform(opt.value)}
+                    className="flex-1 sm:flex-none"
                   >
                     {opt.label}
                   </Button>
                 ))}
               </div>
-              <Button size="sm" onClick={fetchData} disabled={loading}>
+              <Button size="sm" onClick={fetchData} disabled={loading} className="col-span-2 sm:col-span-1 w-full sm:w-auto">
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Apply
               </Button>
@@ -105,7 +106,7 @@ export default function AdPerformancePage() {
         </Card>
 
         {/* Metric Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
           {metricCards.map((card) => {
             const Icon = card.icon;
             return (
@@ -133,7 +134,7 @@ export default function AdPerformancePage() {
           <CardContent>
             {loading ? (
               <div className="h-64 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
               <SpendOverTimeChart data={spendOverTime || []} />

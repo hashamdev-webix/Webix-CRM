@@ -146,21 +146,78 @@ export default function TeamPage() {
   return (
     <>
       <Header title="Team Management" subtitle="Manage your sales team members" />
-      <div className="flex-1 overflow-auto p-6 space-y-4">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
 
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">{users.length} team member{users.length !== 1 ? 's' : ''}</p>
           </div>
-          <Button onClick={() => setShowCreate(true)}>
+          <Button onClick={() => setShowCreate(true)} size="sm">
             <UserPlus className="h-4 w-4 mr-2" />
-            Add Member
+            <span className="hidden sm:inline">Add Member</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
 
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y">
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="p-4 space-y-2">
+                    <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
+                    <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
+                  </div>
+                ))
+              ) : users.length === 0 ? (
+                <div className="px-6 py-12 text-center text-gray-400 text-sm">
+                  No team members yet. Add your first member.
+                </div>
+              ) : (
+                users.map((user) => (
+                  <div key={user._id} className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                        {user.name[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">{user.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                      </div>
+                      <Badge variant={user.isActive ? 'success' : 'outline'} className="text-xs shrink-0">
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          {user.role === 'admin'
+                            ? <Shield className="h-3.5 w-3.5 text-blue-500" />
+                            : <User className="h-3.5 w-3.5 text-gray-400" />
+                          }
+                          <span className="capitalize text-gray-700 text-xs">{user.role.replace('_', ' ')}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{formatDate(user.createdAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleToggleActive(user)}>
+                          {user.isActive
+                            ? <ToggleRight className="h-4 w-4 text-green-500" />
+                            : <ToggleLeft className="h-4 w-4 text-gray-400" />
+                          }
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(user)}>
+                          <Trash2 className="h-4 w-4 text-red-400" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
@@ -208,9 +265,7 @@ export default function TeamPage() {
                               ? <Shield className="h-3.5 w-3.5 text-blue-500" />
                               : <User className="h-3.5 w-3.5 text-gray-400" />
                             }
-                            <span className="capitalize text-gray-700">
-                              {user.role.replace('_', ' ')}
-                            </span>
+                            <span className="capitalize text-gray-700">{user.role.replace('_', ' ')}</span>
                           </div>
                         </td>
                         <td className="px-4 py-4">
@@ -221,23 +276,13 @@ export default function TeamPage() {
                         <td className="px-4 py-4 text-gray-500">{formatDate(user.createdAt)}</td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleActive(user)}
-                              title={user.isActive ? 'Deactivate' : 'Activate'}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => handleToggleActive(user)} title={user.isActive ? 'Deactivate' : 'Activate'}>
                               {user.isActive
                                 ? <ToggleRight className="h-4 w-4 text-green-500" />
                                 : <ToggleLeft className="h-4 w-4 text-gray-400" />
                               }
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(user)}
-                              title="Delete user"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(user)} title="Delete user">
                               <Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" />
                             </Button>
                           </div>

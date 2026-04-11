@@ -15,7 +15,7 @@ export async function GET(req) {
 
     const startDate = searchParams.get('startDate')
       ? new Date(searchParams.get('startDate'))
-      : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
+      : (() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; })();
     const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')) : new Date();
     const platform = searchParams.get('platform'); // 'meta' | 'google' | null
 

@@ -254,11 +254,11 @@ function LeadsContent() {
   return (
     <>
       <Header title="Leads" subtitle={`${total} total leads`} />
-      <div className="flex-1 overflow-hidden flex flex-col p-6 gap-4">
+      <div className="flex-1 overflow-hidden flex flex-col p-4 md:p-6 gap-3 md:gap-4">
 
         {/* Toolbar */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+          <div className="relative w-full sm:flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search name, email, phone..."
@@ -355,95 +355,142 @@ function LeadsContent() {
           </Card>
         )}
 
-        {/* Table */}
+        {/* Table / Card list */}
         <Card className="flex-1 overflow-hidden flex flex-col">
-          <div className="overflow-auto flex-1">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 z-10">
-                <tr className="border-b">
-                  {[
-                    { label: 'Name', field: 'name' },
-                    { label: 'Source', field: 'source' },
-                    { label: 'Service', field: 'service' },
-                    { label: 'Status', field: 'status' },
-                    { label: 'Assigned To', field: 'assignedTo' },
-                    { label: 'Received', field: 'receivedAt' },
-                  ].map(({ label, field }) => (
-                    <th
-                      key={field}
-                      className="text-left px-4 py-3 font-medium text-gray-500 cursor-pointer hover:text-gray-900 select-none whitespace-nowrap"
-                      onClick={() => handleSort(field)}
-                    >
-                      <div className="flex items-center gap-1">
-                        {label}
-                        <SortIcon field={field} sortField={sortField} sortOrder={sortOrder} />
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {loading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j} className="px-4 py-3">
-                          <div className="h-4 bg-gray-100 rounded animate-pulse" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : leads.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center text-gray-400">
-                      No leads found. Try adjusting your filters.
-                    </td>
+          {/* Mobile card list */}
+          <div className="md:hidden flex-1 overflow-auto divide-y">
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-4 space-y-2">
+                  <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
+                </div>
+              ))
+            ) : leads.length === 0 ? (
+              <div className="px-6 py-16 text-center text-gray-400 text-sm">
+                No leads found. Try adjusting your filters.
+              </div>
+            ) : (
+              leads.map((lead) => (
+                <div
+                  key={lead._id}
+                  className="p-4 hover:bg-blue-50/40 cursor-pointer transition-colors"
+                  onClick={() => setSelectedLead(lead)}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 text-sm truncate">{lead.name}</div>
+                      <div className="text-xs text-gray-400 truncate">{lead.email}</div>
+                    </div>
+                    <Badge variant={statusColors[lead.status] || 'secondary'} className="capitalize text-xs shrink-0">
+                      {lead.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={sourceColors[lead.source] || 'secondary'} className="capitalize text-xs">
+                      {lead.source}
+                    </Badge>
+                    <span className="text-xs text-gray-500">{lead.service}</span>
+                    {lead.assignedTo?.name && (
+                      <span className="text-xs text-gray-400">{lead.assignedTo.name}</span>
+                    )}
+                    <span className="text-xs text-gray-400 ml-auto">{formatDate(lead.receivedAt)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:flex flex-col flex-1 overflow-hidden">
+            <div className="overflow-auto flex-1">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 z-10">
+                  <tr className="border-b">
+                    {[
+                      { label: 'Name', field: 'name' },
+                      { label: 'Source', field: 'source' },
+                      { label: 'Service', field: 'service' },
+                      { label: 'Status', field: 'status' },
+                      { label: 'Assigned To', field: 'assignedTo' },
+                      { label: 'Received', field: 'receivedAt' },
+                    ].map(({ label, field }) => (
+                      <th
+                        key={field}
+                        className="text-left px-4 py-3 font-medium text-gray-500 cursor-pointer hover:text-gray-900 select-none whitespace-nowrap"
+                        onClick={() => handleSort(field)}
+                      >
+                        <div className="flex items-center gap-1">
+                          {label}
+                          <SortIcon field={field} sortField={sortField} sortOrder={sortOrder} />
+                        </div>
+                      </th>
+                    ))}
                   </tr>
-                ) : (
-                  leads.map((lead) => (
-                    <tr
-                      key={lead._id}
-                      className="hover:bg-blue-50/40 cursor-pointer transition-colors"
-                      onClick={() => setSelectedLead(lead)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{lead.name}</div>
-                        <div className="text-xs text-gray-400">{lead.email}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={sourceColors[lead.source] || 'secondary'} className="capitalize">
-                          {lead.source}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{lead.service}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={statusColors[lead.status] || 'secondary'} className="capitalize">
-                          {lead.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {lead.assignedTo?.name || <span className="text-gray-300">Unassigned</span>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                        {formatDate(lead.receivedAt)}
+                </thead>
+                <tbody className="divide-y">
+                  {loading ? (
+                    Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={i}>
+                        {Array.from({ length: 6 }).map((_, j) => (
+                          <td key={j} className="px-4 py-3">
+                            <div className="h-4 bg-gray-100 rounded animate-pulse" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : leads.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-16 text-center text-gray-400">
+                        No leads found. Try adjusting your filters.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    leads.map((lead) => (
+                      <tr
+                        key={lead._id}
+                        className="hover:bg-blue-50/40 cursor-pointer transition-colors"
+                        onClick={() => setSelectedLead(lead)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{lead.name}</div>
+                          <div className="text-xs text-gray-400">{lead.email}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={sourceColors[lead.source] || 'secondary'} className="capitalize">
+                            {lead.source}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{lead.service}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant={statusColors[lead.status] || 'secondary'} className="capitalize">
+                            {lead.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {lead.assignedTo?.name || <span className="text-gray-300">Unassigned</span>}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                          {formatDate(lead.receivedAt)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
-            <p className="text-sm text-gray-500">
-              {total > 0 ? `Showing ${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} of ${total}` : '0 results'}
+            <p className="text-xs md:text-sm text-gray-500">
+              {total > 0 ? `${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} of ${total}` : '0 results'}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm px-2">Page {page} of {pages}</span>
+              <span className="text-xs md:text-sm px-1 md:px-2">{page}/{pages}</span>
               <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page >= pages}>
                 <ChevronRight className="h-4 w-4" />
               </Button>

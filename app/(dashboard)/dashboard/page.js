@@ -97,10 +97,10 @@ export default function DashboardPage() {
   return (
     <>
       <Header title="Dashboard" subtitle="Overview of your leads and ad performance" />
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
           {summaryCards.map((card) => {
             const Icon = card.icon;
             return (
@@ -122,7 +122,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 md:gap-4">
           <Card className="xl:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Leads Over Time</CardTitle>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Leads by Platform</CardTitle>
@@ -183,7 +183,40 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y">
+              {(recentLeads || []).map((lead) => (
+                <div
+                  key={lead._id}
+                  className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => window.location.href = `/leads?id=${lead._id}`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <div className="font-medium text-gray-900 text-sm">{lead.name}</div>
+                      <div className="text-xs text-gray-400">{lead.email}</div>
+                    </div>
+                    <Badge variant={statusColors[lead.status] || 'secondary'} className="text-xs shrink-0">
+                      {lead.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={sourceColors[lead.source] || 'secondary'} className="text-xs">
+                      {lead.source}
+                    </Badge>
+                    <span className="text-xs text-gray-500">{lead.service}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{formatDateTime(lead.receivedAt)}</span>
+                  </div>
+                </div>
+              ))}
+              {(!recentLeads || recentLeads.length === 0) && (
+                <div className="px-6 py-10 text-center text-gray-400 text-sm">
+                  No leads yet. Leads will appear here after syncing.
+                </div>
+              )}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
