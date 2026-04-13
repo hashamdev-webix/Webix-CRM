@@ -1,4 +1,4 @@
-/**
+ /**
  * Seed script — creates the initial admin user
  * Usage: node scripts/seed.mjs
  *

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import '@/models/Role'; // register Role model for populate
 
 export async function PATCH(req, { params }) {
   const { error } = await requireAdmin(req);

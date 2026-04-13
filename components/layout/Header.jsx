@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useSession } from 'next-auth/react';
 import { Bell, RefreshCw, Menu } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function Header({ title, subtitle }) {
 
   const handleSync = async () => {
     if (syncing) return;
-    setSyncing(true);
+    setSyncing(true); 
     try {
       await Promise.all([
         axios.post('/api/sync/meta?type=all'),

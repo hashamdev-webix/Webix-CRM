@@ -68,7 +68,7 @@ export default function LoginPage() {
           <h1 className="text-4xl font-black text-white tracking-tight">Webix CRM</h1>
           <p className="text-zinc-500 mt-2 text-sm">Sign in to your dashboard</p>
         </div>
-
+ 
         {/* Card */}
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden">
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
-
+ 
               {/* Password */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">

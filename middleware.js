@@ -7,5 +7,6 @@ export const config = {
     '/ad-performance/:path*',
     '/team/:path*',
     '/settings/:path*',
+    '/admin/:path*',
   ],
 };

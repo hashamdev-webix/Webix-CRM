@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import '@/models/Role';
+import '@/models/Company';
 
 export async function GET(req) {
   const { error } = await requireAdmin(req);
@@ -10,7 +12,11 @@ export async function GET(req) {
 
   try {
     await connectDB();
-    const users = await User.find().sort({ createdAt: -1 }).lean();
+    const users = await User.find()
+      .populate({ path: 'roles', select: 'name description', strictPopulate: false })
+      .populate({ path: 'company_id', select: 'name', strictPopulate: false })
+      .sort({ createdAt: -1 })
+      .lean();
     return NextResponse.json(users);
   } catch (err) {
     console.error('[Users GET]', err);
@@ -24,25 +30,32 @@ export async function POST(req) {
 
   try {
     await connectDB();
-    const body = await req.json();
+    const { name, email, password, roleValue, company_id } = await req.json();
 
-    if (!body.name || !body.email || !body.password) {
+    if (!name || !email || !password) {
       return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
     }
 
-    const existing = await User.findOne({ email: body.email });
+    const existing = await User.findOne({ email });
     if (existing) {
       return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
     }
 
+    const isAdmin = roleValue === 'admin';
     const user = await User.create({
-      name: body.name,
-      email: body.email,
-      password: body.password,
-      role: body.role || 'sales_member',
+      name,
+      email,
+      password,
+      role: isAdmin ? 'admin' : 'sales_member',
+      roles: isAdmin || !roleValue ? [] : [roleValue],
+      company_id: company_id || null,
       isActive: true,
     });
 
+    await user.populate([
+      { path: 'roles', select: 'name description', strictPopulate: false },
+      { path: 'company_id', select: 'name', strictPopulate: false },
+    ]);
     return NextResponse.json(user.toSafeObject(), { status: 201 });
   } catch (err) {
     console.error('[Users POST]', err);

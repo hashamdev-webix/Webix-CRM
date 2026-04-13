@@ -19,18 +19,31 @@ import { toast } from '@/hooks/use-toast';
 import { formatDate } from '@/lib/utils';
 
 function CreateUserDialog({ open, onClose, onCreate }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'sales_member' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', roleValue: '', company_id: '' });
+  const [dbRoles, setDbRoles] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (open) {
+      axios.get('/api/roles').then((r) => setDbRoles(r.data)).catch(() => {});
+      axios.get('/api/admin/config/companies').then((r) => setCompanies(r.data.filter((c) => c.is_active))).catch(() => {});
+    }
+  }, [open]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.roleValue) {
+      setError('Please select a role');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const res = await axios.post('/api/users', form);
       onCreate(res.data);
-      setForm({ name: '', email: '', password: '', role: 'sales_member' });
+      setForm({ name: '', email: '', password: '', roleValue: '', company_id: '' });
       onClose();
       toast({ title: 'Team member created successfully', variant: 'success' });
     } catch (err) {
@@ -80,13 +93,41 @@ function CreateUserDialog({ open, onClose, onCreate }) {
           </div>
           <div className="space-y-2">
             <Label>Role</Label>
-            <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}>
+            <Select value={form.roleValue} onValueChange={(v) => setForm((f) => ({ ...f, roleValue: v }))}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sales_member">Sales Member</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                {/* Admin is always first and permanent */}
+                <SelectItem value="admin">
+                  <span className="flex items-center gap-2">
+                    <Shield className="h-3.5 w-3.5 text-blue-500" />
+                    Admin
+                  </span>
+                </SelectItem>
+                {/* Dynamic roles from DB */}
+                {dbRoles.map((r) => (
+                  <SelectItem key={r._id} value={r._id}>
+                    {r.name}
+                    {r.description && (
+                      <span className="text-xs text-gray-400 ml-1">— {r.description}</span>
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Company (optional)</Label>
+            <Select value={form.company_id} onValueChange={(v) => setForm((f) => ({ ...f, company_id: v === 'none' ? '' : v }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="No company assigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No company</SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -196,7 +237,9 @@ export default function TeamPage() {
                             ? <Shield className="h-3.5 w-3.5 text-blue-500" />
                             : <User className="h-3.5 w-3.5 text-gray-400" />
                           }
-                          <span className="capitalize text-gray-700 text-xs">{user.role.replace('_', ' ')}</span>
+                          <span className="text-gray-700 text-xs">
+                            {user.role === 'admin' ? 'Admin' : (user.roles?.[0]?.name || 'Sales Member')}
+                          </span>
                         </div>
                         <span className="text-xs text-gray-400">{formatDate(user.createdAt)}</span>
                       </div>
@@ -223,6 +266,7 @@ export default function TeamPage() {
                   <tr className="border-b bg-gray-50">
                     <th className="text-left px-6 py-3 font-medium text-gray-500">Member</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-500">Role</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Company</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-500">Joined</th>
                     <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
@@ -232,7 +276,7 @@ export default function TeamPage() {
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i}>
-                        {Array.from({ length: 5 }).map((_, j) => (
+                        {Array.from({ length: 6 }).map((_, j) => (
                           <td key={j} className="px-4 py-4">
                             <div className="h-4 bg-gray-100 rounded animate-pulse" />
                           </td>
@@ -241,7 +285,7 @@ export default function TeamPage() {
                     ))
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                         No team members yet. Add your first member.
                       </td>
                     </tr>
@@ -265,8 +309,13 @@ export default function TeamPage() {
                               ? <Shield className="h-3.5 w-3.5 text-blue-500" />
                               : <User className="h-3.5 w-3.5 text-gray-400" />
                             }
-                            <span className="capitalize text-gray-700">{user.role.replace('_', ' ')}</span>
+                            <span className="text-gray-700">
+                              {user.role === 'admin' ? 'Admin' : (user.roles?.[0]?.name || 'Sales Member')}
+                            </span>
                           </div>
+                        </td>
+                        <td className="px-4 py-4 text-gray-600 text-sm">
+                          {user.company_id?.name || <span className="text-gray-300">—</span>}
                         </td>
                         <td className="px-4 py-4">
                           <Badge variant={user.isActive ? 'success' : 'outline'}>
