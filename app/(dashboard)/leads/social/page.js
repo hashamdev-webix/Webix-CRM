@@ -18,6 +18,7 @@ import DuplicateUrlWarning from '@/components/leads/DuplicateUrlWarning';
 import LeadDetailDrawer from '@/components/leads/LeadDetailDrawer';
 import OutreachStatusBadge from '@/components/leads/OutreachStatusBadge';
 import { Search, Filter, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { usePermission } from '@/hooks/use-permission';
 
 // ─── Add Lead Form ────────────────────────────────────────────────────────────
 function AddLeadForm({ onSuccess }) {
@@ -194,6 +195,7 @@ function AddLeadForm({ onSuccess }) {
 function LeadList() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === 'admin';
+  const canViewAll = usePermission('leads.social.view.all');
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -201,6 +203,7 @@ function LeadList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedLead, setSelectedLead] = useState(null);
+  const [scope, setScope] = useState('all'); // 'all' | 'mine'
   const [filters, setFilters] = useState({ status: '', platform: '', company: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [platforms, setPlatforms] = useState([]);
@@ -220,6 +223,7 @@ function LeadList() {
       if (filters.status) params.set('status', filters.status);
       if (filters.platform) params.set('platform', filters.platform);
       if (filters.company) params.set('company', filters.company);
+      if (canViewAll && scope === 'mine') params.set('mine', 'true');
       const res = await axios.get(`/api/leads/social?${params}`);
       setLeads(res.data.leads);
       setTotal(res.data.total);
@@ -228,7 +232,7 @@ function LeadList() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, scope, canViewAll]);
 
   useEffect(() => { fetchLeads(1); }, [fetchLeads]);
 
@@ -242,6 +246,20 @@ function LeadList() {
   // Mobile card view + desktop table
   return (
     <div className="space-y-4">
+      {/* Scope toggle — only for users with view.all permission */}
+      {canViewAll && (
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+          {[{ id: 'all', label: 'All Leads' }, { id: 'mine', label: 'My Leads' }].map((s) => (
+            <button key={s.id} onClick={() => setScope(s.id)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                scope === s.id ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 max-w-sm">

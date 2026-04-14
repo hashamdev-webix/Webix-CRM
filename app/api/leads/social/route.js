@@ -29,8 +29,9 @@ export const GET = withPermission('leads.social.view', async (req, _ctx, session
   const filter = {};
 
   // Scope to own leads unless user has view.all permission
-  // Include created_by so users can see leads they filled in (even before ownership is set)
-  if (!canViewAll) {
+  // ?mine=true forces own-only even for users with view.all
+  const forceOwn = searchParams.get('mine') === 'true';
+  if (!canViewAll || forceOwn) {
     filter.$or = [
       { owner_user_id: session.user.id },
       { assigned_to: session.user.id },

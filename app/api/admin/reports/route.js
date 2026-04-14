@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import SocialLead from '@/models/SocialLead';
 import DataEntryLead from '@/models/DataEntryLead';
+import Lead from '@/models/Lead';
 import OutreachEmail from '@/models/OutreachEmail';
 import OutreachCall from '@/models/OutreachCall';
 import FollowUp from '@/models/FollowUp';
@@ -15,20 +16,28 @@ export const GET = withPermission('reports.view', async (req) => {
   const report = searchParams.get('report') || 'overview';
 
   const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')) : null;
-  const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')) : null;
+  const endDateRaw = searchParams.get('endDate') ? new Date(searchParams.get('endDate')) : null;
+  // Include the full end day (end of day 23:59:59.999)
+  if (endDateRaw) endDateRaw.setHours(23, 59, 59, 999);
   const dateFilter = {};
   if (startDate) dateFilter.$gte = startDate;
-  if (endDate) dateFilter.$lte = endDate;
+  if (endDateRaw) dateFilter.$lte = endDateRaw;
   const createdAtFilter = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
+  // Legacy leads use receivedAt instead of createdAt
+  const receivedAtFilter = Object.keys(dateFilter).length ? { receivedAt: dateFilter } : {};
 
   if (report === 'overview') {
-    const [socialByStatus, dataentryByStatus, socialByPlatform, dataentryByContact] = await Promise.all([
+    const [socialByStatus, dataentryByStatus, legacyByStatus, socialByPlatform, dataentryByContact] = await Promise.all([
       SocialLead.aggregate([
         { $match: createdAtFilter },
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       DataEntryLead.aggregate([
         { $match: createdAtFilter },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]),
+      Lead.aggregate([
+        { $match: receivedAtFilter },
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       SocialLead.aggregate([
@@ -42,7 +51,7 @@ export const GET = withPermission('reports.view', async (req) => {
         { $group: { _id: '$contact_type', count: { $sum: 1 } } },
       ]),
     ]);
-    return NextResponse.json({ socialByStatus, dataentryByStatus, socialByPlatform, dataentryByContact });
+    return NextResponse.json({ socialByStatus, dataentryByStatus, legacyByStatus, socialByPlatform, dataentryByContact });
   }
 
   if (report === 'performance') {
@@ -92,21 +101,18 @@ export const GET = withPermission('reports.view', async (req) => {
     const stats = await Promise.all(
       companies.map(async (c) => {
         const cid = c._id;
+        // Company stats show ALL leads (no date filter) — full picture per company
         const [socialByStatus, dataentryByStatus, emailsSent, callsMade] = await Promise.all([
           SocialLead.aggregate([
-            { $match: { company_id: cid, ...createdAtFilter } },
+            { $match: { company_id: cid } },
             { $group: { _id: '$status', count: { $sum: 1 } } },
           ]),
           DataEntryLead.aggregate([
-            { $match: { company_id: cid, ...createdAtFilter } },
+            { $match: { company_id: cid } },
             { $group: { _id: '$status', count: { $sum: 1 } } },
           ]),
-          OutreachEmail.countDocuments({
-            ...(Object.keys(dateFilter).length ? { sent_at: dateFilter } : {}),
-          }),
-          OutreachCall.countDocuments({
-            ...(Object.keys(dateFilter).length ? { called_at: dateFilter } : {}),
-          }),
+          OutreachEmail.countDocuments({}),
+          OutreachCall.countDocuments({}),
         ]);
 
         const totalSocial = socialByStatus.reduce((s, r) => s + r.count, 0);

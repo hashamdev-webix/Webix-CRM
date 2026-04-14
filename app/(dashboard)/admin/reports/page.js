@@ -30,12 +30,16 @@ function StatCard({ label, value, icon: Icon, color = 'text-red-600', bg = 'bg-r
 
 // ─── Horizontal bar chart ─────────────────────────────────────────────────────
 const STATUS_COLORS = {
+  // Social + Data-entry statuses
   new: 'bg-gray-400',
   active: 'bg-blue-500',
   in_progress: 'bg-amber-500',
   won: 'bg-green-500',
   not_interested: 'bg-slate-400',
   closed: 'bg-red-400',
+  // Legacy statuses
+  contacted: 'bg-blue-400',
+  converted: 'bg-green-400',
 };
 
 const PLATFORM_COLORS = ['bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-500'];
@@ -111,10 +115,13 @@ export default function AdminReportsPage() {
   // Summary totals from overview data
   const totalSocial = data?.socialByStatus?.reduce((s, r) => s + r.count, 0) || 0;
   const totalDataEntry = data?.dataentryByStatus?.reduce((s, r) => s + r.count, 0) || 0;
+  const totalLegacy = data?.legacyByStatus?.reduce((s, r) => s + r.count, 0) || 0;
   const wonSocial = data?.socialByStatus?.find((r) => r._id === 'won')?.count || 0;
   const wonDataEntry = data?.dataentryByStatus?.find((r) => r._id === 'won')?.count || 0;
+  const wonLegacy = data?.legacyByStatus?.find((r) => r._id === 'converted')?.count || 0;
   const activeSocial = data?.socialByStatus?.find((r) => r._id === 'active')?.count || 0;
   const activeDataEntry = data?.dataentryByStatus?.find((r) => r._id === 'active')?.count || 0;
+  const activeLegacy = data?.legacyByStatus?.find((r) => r._id === 'contacted')?.count || 0;
 
   return (
     <>
@@ -160,8 +167,8 @@ export default function AdminReportsPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard label="Total Social Leads" value={totalSocial} icon={Users} color="text-indigo-600" bg="bg-indigo-50" />
               <StatCard label="Total Data Entry Leads" value={totalDataEntry} icon={Target} color="text-teal-600" bg="bg-teal-50" />
-              <StatCard label="Deals Won" value={wonSocial + wonDataEntry} icon={Trophy} color="text-green-600" bg="bg-green-50" />
-              <StatCard label="Active Leads" value={activeSocial + activeDataEntry} icon={TrendingUp} color="text-amber-600" bg="bg-amber-50" />
+              <StatCard label="Total Legacy Leads" value={totalLegacy} icon={Users} color="text-purple-600" bg="bg-purple-50" />
+              <StatCard label="Deals Won / Converted" value={wonSocial + wonDataEntry + wonLegacy} icon={Trophy} color="text-green-600" bg="bg-green-50" />
             </div>
 
             {/* Charts */}
@@ -181,6 +188,15 @@ export default function AdminReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <BarChart rows={data?.dataentryByStatus || []} colorMap={STATUS_COLORS} emptyText="No data entry leads" />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-gray-700">Legacy Leads by Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarChart rows={data?.legacyByStatus || []} colorMap={STATUS_COLORS} emptyText="No legacy leads" />
                 </CardContent>
               </Card>
 

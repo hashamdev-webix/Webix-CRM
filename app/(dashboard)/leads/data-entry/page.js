@@ -16,6 +16,7 @@ import LeadDetailDrawer from '@/components/leads/LeadDetailDrawer';
 import OutreachPanel from '@/components/leads/OutreachPanel';
 import OutreachStatusBadge from '@/components/leads/OutreachStatusBadge';
 import { Plus, Minus, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { usePermission } from '@/hooks/use-permission';
 
 const STATUS_OPTIONS = ['new', 'active', 'in_progress', 'not_interested', 'won', 'closed'];
 
@@ -171,9 +172,10 @@ function AddLeadForm({ onSuccess }) {
 }
 
 // ─── Lead List (one contact_type sub-tab) ─────────────────────────────────────
-function ContactLeadList({ contactType }) {
+function ContactLeadList({ contactType, scope }) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === 'admin';
+  const canViewAll = usePermission('leads.dataentry.view.all');
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -196,6 +198,7 @@ function ContactLeadList({ contactType }) {
       const params = new URLSearchParams({ page: p, pageSize: 25, contact_type: contactType });
       if (statusFilter) params.set('status', statusFilter);
       if (companyFilter) params.set('company', companyFilter);
+      if (canViewAll && scope === 'mine') params.set('mine', 'true');
       const res = await axios.get(`/api/leads/data-entry?${params}`);
       setLeads(res.data.leads);
       setTotal(res.data.total);
@@ -204,7 +207,7 @@ function ContactLeadList({ contactType }) {
     } finally {
       setLoading(false);
     }
-  }, [contactType, statusFilter, companyFilter]);
+  }, [contactType, statusFilter, companyFilter, scope, canViewAll]);
 
   useEffect(() => { fetchLeads(1); }, [fetchLeads]);
 
@@ -370,6 +373,8 @@ function ContactLeadList({ contactType }) {
 export default function DataEntryLeadsPage() {
   const [activeTab, setActiveTab] = useState('email');
   const [topTab, setTopTab] = useState('list');
+  const [scope, setScope] = useState('all'); // 'all' | 'mine'
+  const canViewAll = usePermission('leads.dataentry.view.all');
 
   const SUB_TABS = [
     { id: 'email', label: 'Email Only' },
@@ -398,6 +403,20 @@ export default function DataEntryLeadsPage() {
           <AddLeadForm onSuccess={() => setTopTab('list')} />
         ) : (
           <>
+            {/* Scope toggle — only for users with view.all permission */}
+            {canViewAll && (
+              <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+                {[{ id: 'all', label: 'All Leads' }, { id: 'mine', label: 'My Leads' }].map((s) => (
+                  <button key={s.id} onClick={() => setScope(s.id)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      scope === s.id ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                    }`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Sub-tabs for contact type */}
             <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
               {SUB_TABS.map((tab) => (
@@ -409,7 +428,7 @@ export default function DataEntryLeadsPage() {
                 </button>
               ))}
             </div>
-            <ContactLeadList key={activeTab} contactType={activeTab} />
+            <ContactLeadList key={`${activeTab}-${scope}`} contactType={activeTab} scope={scope} />
           </>
         )}
       </div>

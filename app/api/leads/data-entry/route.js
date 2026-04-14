@@ -24,7 +24,9 @@ export const GET = withPermission('leads.dataentry.view', async (req, _ctx, sess
   const canViewAll = isAdmin || perms.includes('*') || perms.includes('leads.dataentry.view.all');
 
   const filter = {};
-  if (!canViewAll) {
+  // ?mine=true forces own-only even for users with view.all
+  const forceOwn = searchParams.get('mine') === 'true';
+  if (!canViewAll || forceOwn) {
     filter.$or = [
       { owner_user_id: session.user.id },
       { assigned_to: session.user.id },
