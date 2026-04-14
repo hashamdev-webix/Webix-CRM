@@ -287,6 +287,7 @@ function ContactLeadList({ contactType }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="text-left px-4 py-3 font-medium text-gray-500">Created By</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Business</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Category</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">City</th>
@@ -300,13 +301,14 @@ function ContactLeadList({ contactType }) {
             </thead>
             <tbody className="divide-y">
               {loading ? Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 9 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: 10 }).map((_, j) => (
                   <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td>
                 ))}</tr>
               )) : leads.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-400">No leads found.</td></tr>
+                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-400">No leads found.</td></tr>
               ) : leads.map((lead) => (
                 <tr key={lead._id} className="hover:bg-blue-50/30 cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                  <td className="px-4 py-3 text-gray-700">{lead.created_by?.name || '—'}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{lead.business_name}</p>
                     <p className="text-xs text-gray-400">{lead.owner_name}</p>

@@ -321,20 +321,21 @@ function LeadList() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['Platform', 'Account', 'Niche', 'URL', 'Status', 'Outreach', 'Owner', 'Created', 'Last Remark'].map((h) => (
+                {['Created By', 'Platform', 'Account', 'Niche', 'URL', 'Status', 'Outreach', 'Owner', 'Created', 'Last Remark'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y">
               {loading ? Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 9 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: 10 }).map((_, j) => (
                   <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td>
                 ))}</tr>
               )) : leads.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-400">No social leads found.</td></tr>
+                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-400">No social leads found.</td></tr>
               ) : leads.map((lead) => (
                 <tr key={lead._id} className="hover:bg-blue-50/30 cursor-pointer transition-colors" onClick={() => setSelectedLead(lead)}>
+                  <td className="px-4 py-3 text-gray-700">{lead.created_by?.name || '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{lead.platform_id?.name || '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{lead.social_account_id?.account_name || '—'}</td>
                   <td className="px-4 py-3 text-gray-600">{lead.target_niche_id?.name || '—'}</td>

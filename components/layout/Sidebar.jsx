@@ -30,11 +30,11 @@ const navItems = [
   { section: 'Analytics', roles: ['admin'] },
   { href: '/ad-performance', label: 'Ad Performance', icon: TrendingUp, roles: ['admin'] },
   { href: '/admin/reports', label: 'Reports', icon: FileText, roles: ['admin'] },
-
+ 
   // ─ Admin
   { section: 'Admin', roles: ['admin'] },
   { href: '/team', label: 'Team', icon: BarChart3, roles: ['admin'] },
-  { href: '/admin/roles', label: 'Roles & Permissions', icon: Shield, roles: ['admin'] },
+  { href: ' /admin/roles', label: 'Roles & Permissions', icon: Shield, roles: ['admin'] }, 
   { href: '/admin/config', label: 'Configuration', icon: Cog, roles: ['admin'] },
   { href: '/admin/audit', label: 'Audit Log', icon: FileText, roles: ['admin'] },
 
@@ -46,7 +46,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
-  const { isOpen, close } = useSidebar();
+  const { isOpen , close } = useSidebar();
   const permissions = session?.user?.permissions || [];
   const isAdmin = role === 'admin';
 
