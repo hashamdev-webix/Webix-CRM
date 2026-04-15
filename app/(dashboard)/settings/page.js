@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
-import { RefreshCw, CheckCircle, XCircle, Server, Database, Clock } from 'lucide-react';
+import { RefreshCw, CheckCircle, Server, Clock } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 
 function SyncCard({ title, platform, type, color, icon: Icon }) {
@@ -56,6 +57,77 @@ function SyncCard({ title, platform, type, color, icon: Icon }) {
   );
 }
 
+// ─── Profile Edit Form ────────────────────────────────────────────────────────
+function ProfileEditForm({ session }) {
+  const [name, setName] = useState(session?.user?.name || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (newPassword && newPassword !== confirmPassword) {
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+    if (newPassword && newPassword.length < 8) {
+      toast({ title: 'Password must be at least 8 characters', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = { name };
+      if (newPassword) payload.newPassword = newPassword;
+      await axios.patch('/api/profile', payload);
+      toast({ title: 'Profile updated successfully', variant: 'success' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      toast({ title: err.response?.data?.error || 'Failed to update profile', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSave} className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Full Name</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="space-y-1">
+          <Label>Email</Label>
+          <Input value={session?.user?.email || ''} disabled className="bg-gray-50 text-gray-500" />
+          <p className="text-xs text-gray-400">Contact an admin to change your email</p>
+        </div>
+      </div>
+
+      <div className="border-t pt-4">
+        <p className="text-sm font-medium text-gray-700 mb-3">Change Password</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label>New Password</Label>
+            <Input type="password" placeholder="At least 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} />
+          </div>
+          <div className="space-y-1">
+            <Label>Confirm New Password</Label>
+            <Input type="password" placeholder="Repeat new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">Leave blank to keep your current password</p>
+      </div>
+
+      <Button type="submit" disabled={saving}>
+        {saving ? 'Saving...' : 'Save Profile'}
+      </Button>
+    </form>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === 'admin';
@@ -72,32 +144,21 @@ export default function SettingsPage() {
       <Header title="Settings" subtitle="Application configuration and sync management" />
       <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
 
-        {/* Account Info */}
+        {/* Profile */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Account Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Name</p>
-                <p className="font-medium text-sm mt-1">{session?.user?.name}</p>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-base">My Profile</CardTitle>
+                <CardDescription>Update your name and password</CardDescription>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="font-medium text-sm mt-1">{session?.user?.email}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Role</p>
-                <Badge variant={isAdmin ? 'info' : 'secondary'} className="mt-1">
-                  {session?.user?.role?.replace('_', ' ')}
-                </Badge>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Session Expires</p>
-                <p className="font-medium text-sm mt-1">24 hours</p>
-              </div>
+              <Badge variant={isAdmin ? 'info' : 'secondary'} className="mt-1">
+                {session?.user?.role?.replace('_', ' ')}
+              </Badge>
             </div>
+          </CardHeader>
+          <CardContent>
+            <ProfileEditForm session={session} />
           </CardContent>
         </Card>
 

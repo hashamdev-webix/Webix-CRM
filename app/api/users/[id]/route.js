@@ -17,9 +17,21 @@ export async function PATCH(req, { params }) {
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (body.isActive !== undefined) user.isActive = body.isActive;
-    if (body.role !== undefined) user.role = body.role;
     if (body.name !== undefined) user.name = body.name;
+    if (body.email !== undefined) user.email = body.email;
+    if (body.company_id !== undefined) user.company_id = body.company_id || null;
     if (body.password) user.password = body.password; // will be hashed by pre-save hook
+
+    // roleValue is either 'admin' or a Role ObjectId string
+    if (body.roleValue !== undefined) {
+      if (body.roleValue === 'admin') {
+        user.role = 'admin';
+        user.roles = [];
+      } else {
+        user.role = 'sales_member';
+        user.roles = body.roleValue ? [body.roleValue] : [];
+      }
+    }
 
     await user.save();
     return NextResponse.json(user.toSafeObject());
