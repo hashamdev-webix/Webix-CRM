@@ -17,6 +17,7 @@ import OutreachPanel from '@/components/leads/OutreachPanel';
 import OutreachStatusBadge from '@/components/leads/OutreachStatusBadge';
 import { Plus, Minus, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { usePermission } from '@/hooks/use-permission';
+import { PhoneInputField } from '@/components/ui/phone-input';
 
 const STATUS_OPTIONS = ['new', 'active', 'in_progress', 'not_interested', 'won', 'closed'];
 
@@ -50,7 +51,7 @@ function AddLeadForm({ onSuccess }) {
       toast({ title: 'Business name is required', variant: 'destructive' });
       return;
     }
-    if (!form.phone_number.trim() && !form.email_address.trim()) {
+    if (!form.phone_number && !form.email_address.trim()) {
       toast({ title: 'At least one of phone or email is required', variant: 'destructive' });
       return;
     }
@@ -106,7 +107,11 @@ function AddLeadForm({ onSuccess }) {
             </div>
             <div className="space-y-1">
               <Label>Phone Number</Label>
-              <Input type="tel" value={form.phone_number} onChange={(e) => set('phone_number', e.target.value)} />
+              <PhoneInputField
+                value={form.phone_number}
+                onChange={(val) => set('phone_number', val)}
+                placeholder="Phone number"
+              />
             </div>
             <div className="space-y-1">
               <Label>Email Address</Label>

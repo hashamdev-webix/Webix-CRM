@@ -90,8 +90,8 @@ export async function GET(req) {
       { $sort: { spend: -1 } },
     ]);
 
-    // Spend over time
-    const spendOverTime = await AdMetric.aggregate([
+    // Metrics over time (all metrics per day)
+    const metricsOverTime = await AdMetric.aggregate([
       { $match: metricsFilter },
       {
         $group: {
@@ -102,21 +102,37 @@ export async function GET(req) {
           conversions: { $sum: '$conversions' },
         },
       },
+      {
+        $addFields: {
+          ctr: { $cond: [{ $gt: ['$impressions', 0] }, { $multiply: [{ $divide: ['$clicks', '$impressions'] }, 100] }, 0] },
+          cpc: { $cond: [{ $gt: ['$clicks', 0] }, { $divide: ['$spend', '$clicks'] }, 0] },
+          cpl: { $cond: [{ $gt: ['$conversions', 0] }, { $divide: ['$spend', '$conversions'] }, 0] },
+          // ROAS = conversions per $1000 spent (lead-gen interpretation)
+          roas: { $cond: [{ $gt: ['$spend', 0] }, { $multiply: [{ $divide: ['$conversions', '$spend'] }, 1000] }, 0] },
+          // ROI = estimated return assuming $1000 avg lead value
+          roi: {
+            $cond: [
+              { $gt: ['$spend', 0] },
+              { $multiply: [{ $divide: [{ $subtract: [{ $multiply: ['$conversions', 1000] }, '$spend'] }, '$spend'] }, 100] },
+              0,
+            ],
+          },
+        },
+      },
       { $sort: { _id: 1 } },
     ]);
 
+    // Compute summary ROAS & ROI
+    const s = summary || { impressions: 0, clicks: 0, spend: 0, conversions: 0, ctr: 0, cpc: 0, costPerLead: 0 };
+    const roas = s.spend > 0 ? (s.conversions / s.spend) * 1000 : 0;
+    const roi = s.spend > 0 ? (((s.conversions * 1000) - s.spend) / s.spend) * 100 : 0;
+
     return NextResponse.json({
-      summary: summary || {
-        impressions: 0,
-        clicks: 0,
-        spend: 0,
-        conversions: 0,
-        ctr: 0,
-        cpc: 0,
-        costPerLead: 0,
-      },
+      summary: { ...s, roas, roi },
       perCampaign,
-      spendOverTime: spendOverTime.map((d) => ({ date: d._id, ...d })),
+      metricsOverTime: metricsOverTime.map((d) => ({ date: d._id, ...d })),
+      // keep spendOverTime alias for dashboard chart
+      spendOverTime: metricsOverTime.map((d) => ({ date: d._id, spend: d.spend })),
     });
   } catch (err) {
     console.error('[AdMetrics GET]', err);

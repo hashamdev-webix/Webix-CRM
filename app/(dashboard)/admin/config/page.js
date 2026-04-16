@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { PhoneInputField } from '@/components/ui/phone-input';
 
 const TABS = [
   { id: 'companies', label: 'Companies' },
@@ -20,7 +21,6 @@ const TABS = [
   { id: 'niches', label: 'Target Niches' },
   { id: 'email_accounts', label: 'Email Accounts' },
   { id: 'phones', label: 'Phone Options' },
-  { id: 'call_scripts', label: 'Call Scripts' },
 ];
 
 function EntityTable({ entity, items, onToggle, onDelete, onEdit }) {
@@ -65,7 +65,7 @@ function EntityTable({ entity, items, onToggle, onDelete, onEdit }) {
 
 function EntityForm({ entity, platforms, item, onSave, onCancel }) {
   const isEdit = !!item;
-  const [form, setForm] = useState(item ? { ...item, smtp_pass: '' } : { is_active: true });
+  const [form, setForm] = useState(item ? { ...item } : { is_active: true });
   const [saving, setSaving] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -140,24 +140,18 @@ function EntityForm({ entity, platforms, item, onSave, onCancel }) {
 
       {entity === 'email_accounts' && (
         <>
-          <div className="space-y-1"><Label>Label</Label><Input value={form.label || ''} onChange={(e) => set('label', e.target.value)} required /></div>
-          <div className="space-y-1"><Label>Email Address</Label><Input type="email" value={form.email_address || ''} onChange={(e) => set('email_address', e.target.value)} required /></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1"><Label>SMTP Host</Label><Input value={form.smtp_host || ''} onChange={(e) => set('smtp_host', e.target.value)} required /></div>
-            <div className="space-y-1"><Label>SMTP Port</Label><Input type="number" value={form.smtp_port || 587} onChange={(e) => set('smtp_port', parseInt(e.target.value))} required /></div>
-          </div>
-          <div className="space-y-1"><Label>SMTP User</Label><Input value={form.smtp_user || ''} onChange={(e) => set('smtp_user', e.target.value)} required /></div>
-          <div className="space-y-1">
-            <Label>{isEdit ? 'New Password (leave blank to keep current)' : 'SMTP Password'}</Label>
-            <Input type="password" value={form.smtp_pass || ''} onChange={(e) => set('smtp_pass', e.target.value)} required={!isEdit} />
-          </div>
+          <div className="space-y-1"><Label>Name / Label</Label><Input placeholder="e.g. Sales Team" value={form.label || ''} onChange={(e) => set('label', e.target.value)} required /></div>
+          <div className="space-y-1"><Label>Email Address</Label><Input type="email" placeholder="sales@example.com" value={form.email_address || ''} onChange={(e) => set('email_address', e.target.value)} required /></div>
         </>
       )}
 
       {entity === 'phones' && (
         <>
           <div className="space-y-1"><Label>Label</Label><Input value={form.label || ''} onChange={(e) => set('label', e.target.value)} required /></div>
-          <div className="space-y-1"><Label>Number</Label><Input value={form.number || ''} onChange={(e) => set('number', e.target.value)} required /></div>
+          <div className="space-y-1">
+            <Label>Number</Label>
+            <PhoneInputField value={form.number || ''} onChange={(val) => set('number', val || '')} placeholder="Phone number" />
+          </div>
           <div className="space-y-1"><Label>Type</Label>
             <Select value={form.type || ''} onValueChange={(v) => set('type', v)}>
               <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
@@ -171,29 +165,6 @@ function EntityForm({ entity, platforms, item, onSave, onCancel }) {
         </>
       )}
 
-      {entity === 'call_scripts' && (
-        <>
-          <div className="space-y-1"><Label>Title</Label><Input value={form.title || ''} onChange={(e) => set('title', e.target.value)} required /></div>
-          <div className="space-y-1"><Label>Platform (optional)</Label>
-            <Select value={form.platform_id || ''} onValueChange={(v) => set('platform_id', v)}>
-              <SelectTrigger><SelectValue placeholder="Any platform" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Any</SelectItem>
-                {platforms.map((p) => <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Script Body</Label>
-            <textarea
-              className="w-full min-h-[120px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              value={form.body_text || ''}
-              onChange={(e) => set('body_text', e.target.value)}
-              required
-            />
-          </div>
-        </>
-      )}
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>

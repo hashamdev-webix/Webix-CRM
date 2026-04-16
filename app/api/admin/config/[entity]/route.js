@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { withPermission } from '@/lib/permissions';
 import { writeAudit } from '@/lib/audit';
-import { encrypt } from '@/lib/encrypt';
 
 // Dynamic entity → model mapping
 async function getModel(entity) {
@@ -46,14 +45,6 @@ export const POST = withPermission('admin.config.manage', async (req, { params }
   const Model = await getModel(params.entity);
   const body = await req.json();
 
-  // Special handling: encrypt SMTP password for email_accounts
-  if (params.entity === 'email_accounts') {
-    if (!body.smtp_pass) {
-      return NextResponse.json({ error: 'smtp_pass is required' }, { status: 400 });
-    }
-    body.smtp_pass_encrypted = encrypt(body.smtp_pass);
-    delete body.smtp_pass;
-  }
 
   // Set created_by if model has it
   if (['social_accounts', 'call_scripts'].includes(params.entity)) {
@@ -84,13 +75,6 @@ export const PATCH = withPermission('admin.config.manage', async (req, { params 
   const { id, ...updates } = body;
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-  // Encrypt SMTP password if being updated
-  if (params.entity === 'email_accounts' && updates.smtp_pass) {
-    updates.smtp_pass_encrypted = encrypt(updates.smtp_pass);
-    delete updates.smtp_pass;
-  }
-  // Never allow smtp_pass_encrypted to be set directly via API
-  delete updates.smtp_pass_encrypted_raw;
 
   const item = await Model.findByIdAndUpdate(id, { $set: updates }, { new: true });
   if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
