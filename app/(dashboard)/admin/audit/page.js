@@ -79,13 +79,14 @@ export default function AuditPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ event_type: '', entity_type: '', startDate: '', endDate: '' });
 
-  const fetchEvents = useCallback(async (p = 1) => {
+  const fetchEvents = useCallback(async (p = 1, size = pageSize) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: p, pageSize: 50 });
+      const params = new URLSearchParams({ page: p, pageSize: size });
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
       const res = await axios.get(`/api/admin/audit?${params}`);
       setEvents(res.data.events);
@@ -95,7 +96,7 @@ export default function AuditPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, pageSize]);
 
   useEffect(() => { fetchEvents(1); }, [fetchEvents]);
 
@@ -187,15 +188,43 @@ export default function AuditPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-xs text-gray-500">{total} total events</p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => fetchEvents(page - 1)} disabled={page <= 1}>
-                  <ChevronLeft className="h-4 w-4" />
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t bg-gray-50/60">
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-gray-500">
+                  {total > 0
+                    ? `Showing ${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, total)} of ${total.toLocaleString()} events`
+                    : '0 events'}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-400">Per page:</span>
+                  <select
+                    className="h-7 rounded-md border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    value={pageSize}
+                    onChange={(e) => {
+                      const s = Number(e.target.value);
+                      setPageSize(s);
+                      fetchEvents(1, s);
+                    }}
+                  >
+                    {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => fetchEvents(1)} disabled={page <= 1}>
+                  <ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" />
                 </Button>
-                <span className="text-xs">{page}/{pages}</span>
-                <Button variant="outline" size="sm" onClick={() => fetchEvents(page + 1)} disabled={page >= pages}>
-                  <ChevronRight className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => fetchEvents(page - 1)} disabled={page <= 1}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span className="text-xs text-gray-600 px-2 font-medium">
+                  Page {page} of {pages || 1}
+                </span>
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => fetchEvents(page + 1)} disabled={page >= pages}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => fetchEvents(pages)} disabled={page >= pages}>
+                  <ChevronRight className="h-3.5 w-3.5" /><ChevronRight className="h-3.5 w-3.5 -ml-2" />
                 </Button>
               </div>
             </div>

@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Users, BarChart3, Settings, TrendingUp,
   LogOut, ChevronRight, X,
   Share2, Database, Clock, Shield, Cog, FileText,
+  UserSquare, Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,12 @@ const navItems = [
   { href: '/leads/social', label: 'Social Leads', icon: Share2, roles: ['admin', 'sales_member'] },
   { href: '/leads/data-entry', label: 'Data Entry Leads', icon: Database, roles: ['admin', 'sales_member'] },
   { href: '/leads/follow-ups', label: 'Follow-ups', icon: Clock, roles: ['admin', 'sales_member'] },
+
+  // ─ HR
+  { section: 'HR & People', roles: ['admin', 'sales_member'], permission: 'hr.view' },
+  { href: '/hr', label: 'HR Dashboard', icon: UserSquare, roles: ['admin', 'sales_member'], permission: 'hr.view' },
+  { href: '/hr/employees', label: 'Employees', icon: Users, roles: ['admin', 'sales_member'], permission: 'hr.employees.view' },
+  { href: '/hr/departments', label: 'Departments', icon: Building2, roles: ['admin', 'sales_member'], permission: 'hr.departments.manage' },
 
   // ─ Analytics
   { section: 'Analytics', roles: ['admin'] },
@@ -77,7 +84,7 @@ export default function Sidebar() {
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 w-64 bg-black text-white flex flex-col transition-transform duration-300 ease-in-out',
-          'md:static md:translate-x-0 md:z-auto',
+          'md:static md:translate-x-0 md:z-auto md:h-screen md:flex-shrink-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
