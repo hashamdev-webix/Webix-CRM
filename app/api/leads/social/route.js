@@ -8,6 +8,7 @@ import OutreachCall from '@/models/OutreachCall';
 import '@/models/Company';
 import { withPermission } from '@/lib/permissions';
 import { writeAudit } from '@/lib/audit';
+import mongoose from 'mongoose';
 
 // ─── GET — list social leads ──────────────────────────────────────────────────
 export const GET = withPermission('leads.social.view', async (req, _ctx, session) => {
@@ -158,4 +159,33 @@ export const POST = withPermission('leads.social.create', async (req, _ctx, sess
   });
 
   return NextResponse.json(lead, { status: 201 });
+});
+
+// ─── DELETE — bulk delete (admin only) ───────────────────────────────────────
+export const DELETE = withPermission('leads.social.view', async (req, _ctx, session) => {
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  }
+  await connectDB();
+  const { ids } = await req.json();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: 'ids array required' }, { status: 400 });
+  }
+
+  const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+  await Promise.all([
+    SocialLead.deleteMany({ _id: { $in: objectIds } }),
+    LeadRemark.deleteMany({ lead_id: { $in: objectIds } }),
+    LeadTimeline.deleteMany({ lead_id: { $in: objectIds } }),
+  ]);
+
+  await writeAudit({
+    event_type: 'lead.deleted',
+    entity_type: 'lead_social',
+    entity_id: ids[0],
+    actor_user_id: session.user.id,
+    metadata: { count: ids.length, bulk: true },
+  });
+
+  return NextResponse.json({ success: true, deleted: ids.length });
 });

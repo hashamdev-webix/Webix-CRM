@@ -19,11 +19,11 @@ import { PhoneInputField } from '@/components/ui/phone-input';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  active:     { label: 'Active',     dot: 'bg-emerald-400', pill: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', glow: 'shadow-emerald-200' },
-  on_leave:   { label: 'On Leave',   dot: 'bg-amber-400',   pill: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',   glow: 'shadow-amber-200' },
-  inactive:   { label: 'Inactive',   dot: 'bg-gray-400',    pill: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200',    glow: 'shadow-gray-200' },
-  terminated: { label: 'Terminated', dot: 'bg-red-500',     pill: 'bg-red-50 text-red-700 ring-1 ring-red-200',     glow: 'shadow-red-200' },
-  resigned:   { label: 'Resigned',   dot: 'bg-orange-400',  pill: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',  glow: 'shadow-orange-200' },
+  active:     { label: 'Active',     dot: 'bg-emerald-400', pill: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', glow: 'rgba(52,211,153,0.3)' },
+  on_leave:   { label: 'On Leave',   dot: 'bg-amber-400',   pill: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',       glow: 'rgba(251,191,36,0.25)' },
+  inactive:   { label: 'Inactive',   dot: 'bg-gray-400',    pill: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200',         glow: 'rgba(156,163,175,0.2)' },
+  terminated: { label: 'Terminated', dot: 'bg-red-500',     pill: 'bg-red-50 text-red-700 ring-1 ring-red-200',             glow: 'rgba(239,68,68,0.3)' },
+  resigned:   { label: 'Resigned',   dot: 'bg-orange-400',  pill: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',    glow: 'rgba(251,146,60,0.25)' },
 };
 const TYPE_LABELS  = { full_time: 'Full-Time', part_time: 'Part-Time', contract: 'Contract', intern: 'Intern' };
 const LOC_LABELS   = { office: 'Office', remote: 'Remote', hybrid: 'Hybrid' };
@@ -55,21 +55,30 @@ function SelectField({ value, onChange, options, placeholder }) {
     </select>
   );
 }
-function InfoCard({ icon: Icon, label, value, accent }) {
+function InfoCard({ icon: Icon, label, value, accent, delay = 0 }) {
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-xl border bg-white transition-shadow hover:shadow-sm ${accent || 'border-gray-100'}`}>
-      <div className={`p-2 rounded-lg flex-shrink-0 ${accent ? 'bg-red-50' : 'bg-gray-50'}`}>
+    <div
+      className={`flex items-start gap-3 p-4 rounded-xl border bg-white transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-fade-up ${accent ? 'border-red-100' : 'border-gray-100'}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className={`p-2.5 rounded-xl flex-shrink-0 ${accent ? 'bg-gradient-to-br from-red-50 to-red-100' : 'bg-gray-50'}`}>
         <Icon className={`h-4 w-4 ${accent ? 'text-red-500' : 'text-gray-400'}`} />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-medium text-gray-800 mt-0.5 break-words">{value || '—'}</p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-sm font-semibold text-gray-800 mt-0.5 break-words">{value || <span className="text-gray-300 font-normal">—</span>}</p>
       </div>
     </div>
   );
 }
 function SectionLabel({ children }) {
-  return <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-4 h-px bg-gray-300 inline-block" />{children}<span className="flex-1 h-px bg-gray-100 inline-block" /></p>;
+  return (
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+      <span className="w-6 h-px bg-gradient-to-r from-red-300 to-gray-300 inline-block" />
+      {children}
+      <span className="flex-1 h-px bg-gray-100 inline-block" />
+    </p>
+  );
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
@@ -311,11 +320,18 @@ export default function EmployeeProfilePage() {
       <div className="flex-1 overflow-auto">
 
         {/* ── Hero Banner ────────────────────────────────────────────────── */}
-        <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black overflow-hidden">
-          {/* Decorative blobs */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-red-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(220,38,38,0.15),transparent_60%)]" />
+        <div className="relative bg-gradient-to-br from-gray-900 via-gray-850 to-black overflow-hidden">
+          {/* Dot grid */}
+          <div className="absolute inset-0 opacity-[0.04]"
+            style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+          {/* Floating blobs */}
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 animate-float-blob"
+            style={{ background: 'radial-gradient(circle, rgba(220,38,38,0.25), transparent 70%)' }} />
+          <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 animate-float-blob2"
+            style={{ background: 'radial-gradient(circle, rgba(180,10,10,0.2), transparent 70%)' }} />
+          <div className="absolute top-1/2 left-1/3 w-48 h-48 rounded-full blur-2xl animate-float-blob"
+            style={{ background: 'radial-gradient(circle, rgba(220,38,38,0.08), transparent 70%)', animationDelay: '3s' }} />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(220,38,38,0.12),transparent_60%)]" />
 
           <div className="relative px-4 md:px-8 pt-6 pb-8">
             {/* Back button */}
@@ -325,7 +341,10 @@ export default function EmployeeProfilePage() {
 
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-end">
               {/* Avatar */}
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0 animate-fade-up" style={{ animationDelay: '80ms' }}>
+                {/* Glow behind avatar */}
+                <div className="absolute inset-0 rounded-2xl blur-xl opacity-40"
+                  style={{ background: `radial-gradient(circle, ${sc.glow || 'rgba(220,38,38,0.3)'}, transparent 70%)`, transform: 'scale(1.3)' }} />
                 <Avatar employee={emp} size="xl" preview={photoPreview} />
                 {editing && canEdit && (
                   <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
@@ -336,8 +355,13 @@ export default function EmployeeProfilePage() {
                     <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f)); } }} />
                   </label>
                 )}
-                {/* Online/status dot */}
-                <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white ${sc.dot}`} />
+                {/* Status dot with pulse ring for active */}
+                <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-gray-900 ${sc.dot}`}>
+                  {emp.status === 'active' && (
+                    <span className={`absolute inset-0 rounded-full ${sc.dot} opacity-60`}
+                      style={{ animation: 'pulseRingOut 2s ease-out infinite' }} />
+                  )}
+                </span>
               </div>
 
               {/* Info */}
@@ -421,18 +445,20 @@ export default function EmployeeProfilePage() {
         </div>
 
         {/* ── Tabs ───────────────────────────────────────────────────────── */}
-        <div className="bg-white border-b border-gray-200 px-4 md:px-8 sticky top-0 z-10 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 md:px-8 sticky top-0 z-10 shadow-sm">
           <div className="flex gap-0 overflow-x-auto scrollbar-hide">
             {tabs.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 ${
-                    active ? 'border-red-600 text-red-600 bg-red-50/50' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                  className={`relative flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    active ? 'text-red-600' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50/80'
                   }`}>
-                  <Icon className={`h-4 w-4 ${active ? 'text-red-500' : 'text-gray-400'}`} />
+                  <Icon className={`h-4 w-4 transition-colors duration-200 ${active ? 'text-red-500' : 'text-gray-400'}`} />
                   {t.label}
+                  {/* Animated bottom indicator */}
+                  <span className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-300 ${active ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}`} />
                 </button>
               );
             })}
@@ -440,7 +466,7 @@ export default function EmployeeProfilePage() {
         </div>
 
         {/* ── Tab content ─────────────────────────────────────────────────── */}
-        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+        <div key={tab} className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 animate-fade-scale">
 
           {/* ── PERSONAL TAB ── */}
           {tab === 'personal' && (
@@ -450,27 +476,27 @@ export default function EmployeeProfilePage() {
                   <div>
                     <SectionLabel>Identity</SectionLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <InfoCard icon={User}     label="First Name"      value={emp.firstName} accent />
-                      <InfoCard icon={User}     label="Last Name"       value={emp.lastName} accent />
-                      <InfoCard icon={Users}    label="Father's Name"   value={emp.fatherName} />
-                      <InfoCard icon={Calendar} label="Date of Birth"   value={fmt(emp.dateOfBirth)} />
-                      <InfoCard icon={User}     label="Gender"          value={emp.gender ? emp.gender.charAt(0).toUpperCase() + emp.gender.slice(1) : null} />
-                      <InfoCard icon={User}     label="Marital Status"  value={emp.maritalStatus ? emp.maritalStatus.charAt(0).toUpperCase() + emp.maritalStatus.slice(1) : null} />
-                      <InfoCard icon={FileText} label="CNIC"            value={emp.cnic} />
-                      <InfoCard icon={MapPin}   label="Nationality"     value={emp.nationality} />
-                      <InfoCard icon={User}     label="Religion"        value={emp.religion} />
+                      <InfoCard icon={User}     label="First Name"      value={emp.firstName} accent delay={0} />
+                      <InfoCard icon={User}     label="Last Name"       value={emp.lastName} accent delay={40} />
+                      <InfoCard icon={Users}    label="Father's Name"   value={emp.fatherName} delay={80} />
+                      <InfoCard icon={Calendar} label="Date of Birth"   value={fmt(emp.dateOfBirth)} delay={120} />
+                      <InfoCard icon={User}     label="Gender"          value={emp.gender ? emp.gender.charAt(0).toUpperCase() + emp.gender.slice(1) : null} delay={160} />
+                      <InfoCard icon={User}     label="Marital Status"  value={emp.maritalStatus ? emp.maritalStatus.charAt(0).toUpperCase() + emp.maritalStatus.slice(1) : null} delay={200} />
+                      <InfoCard icon={FileText} label="CNIC"            value={emp.cnic} delay={240} />
+                      <InfoCard icon={MapPin}   label="Nationality"     value={emp.nationality} delay={280} />
+                      <InfoCard icon={User}     label="Religion"        value={emp.religion} delay={320} />
                     </div>
                   </div>
 
                   <div>
                     <SectionLabel>Contact Information</SectionLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <InfoCard icon={Mail}  label="Work Email"     value={emp.email} accent />
-                      <InfoCard icon={Phone} label="Phone"          value={emp.phone} accent />
-                      <InfoCard icon={Mail}  label="Personal Email" value={emp.personalEmail} />
+                      <InfoCard icon={Mail}  label="Work Email"     value={emp.email} accent delay={0} />
+                      <InfoCard icon={Phone} label="Phone"          value={emp.phone} accent delay={40} />
+                      <InfoCard icon={Mail}  label="Personal Email" value={emp.personalEmail} delay={80} />
                       {(emp.address?.street || emp.address?.city) && (
                         <div className="sm:col-span-2 lg:col-span-3">
-                          <InfoCard icon={MapPin} label="Address" value={[emp.address?.street, emp.address?.city, emp.address?.state, emp.address?.country, emp.address?.postalCode].filter(Boolean).join(', ')} />
+                          <InfoCard icon={MapPin} label="Address" value={[emp.address?.street, emp.address?.city, emp.address?.state, emp.address?.country, emp.address?.postalCode].filter(Boolean).join(', ')} delay={120} />
                         </div>
                       )}
                     </div>
@@ -480,9 +506,9 @@ export default function EmployeeProfilePage() {
                     <div>
                       <SectionLabel>Emergency Contact</SectionLabel>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <InfoCard icon={AlertCircle} label="Name"     value={emp.emergencyContact?.name} accent />
-                        <InfoCard icon={Users}       label="Relation" value={emp.emergencyContact?.relation} />
-                        <InfoCard icon={Phone}       label="Phone"    value={emp.emergencyContact?.phone} />
+                        <InfoCard icon={AlertCircle} label="Name"     value={emp.emergencyContact?.name} accent delay={0} />
+                        <InfoCard icon={Users}       label="Relation" value={emp.emergencyContact?.relation} delay={40} />
+                        <InfoCard icon={Phone}       label="Phone"    value={emp.emergencyContact?.phone} delay={80} />
                       </div>
                     </div>
                   )}
@@ -584,15 +610,15 @@ export default function EmployeeProfilePage() {
               {!editing ? (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <InfoCard icon={Building2} label="Employee ID"      value={emp.employeeId} accent />
-                    <InfoCard icon={Building2} label="Department"       value={emp.department?.name} />
-                    <InfoCard icon={Briefcase} label="Designation"      value={emp.designation} accent />
-                    <InfoCard icon={Users}     label="Employment Type"  value={TYPE_LABELS[emp.employmentType]} />
-                    <InfoCard icon={MapPin}    label="Work Location"    value={LOC_LABELS[emp.workLocation]} />
-                    <InfoCard icon={Calendar}  label="Join Date"        value={fmt(emp.joinDate)} />
-                    <InfoCard icon={Clock}     label="Probation End"    value={fmt(emp.probationEndDate)} />
-                    <InfoCard icon={Users}     label="Reporting To"     value={emp.reportingTo ? `${emp.reportingTo.firstName} ${emp.reportingTo.lastName} (${emp.reportingTo.employeeId})` : null} />
-                    <InfoCard icon={Activity}  label="Status"           value={sc.label} accent />
+                    <InfoCard icon={Building2} label="Employee ID"      value={emp.employeeId} accent delay={0} />
+                    <InfoCard icon={Building2} label="Department"       value={emp.department?.name} delay={40} />
+                    <InfoCard icon={Briefcase} label="Designation"      value={emp.designation} accent delay={80} />
+                    <InfoCard icon={Users}     label="Employment Type"  value={TYPE_LABELS[emp.employmentType]} delay={120} />
+                    <InfoCard icon={MapPin}    label="Work Location"    value={LOC_LABELS[emp.workLocation]} delay={160} />
+                    <InfoCard icon={Calendar}  label="Join Date"        value={fmt(emp.joinDate)} delay={200} />
+                    <InfoCard icon={Clock}     label="Probation End"    value={fmt(emp.probationEndDate)} delay={240} />
+                    <InfoCard icon={Users}     label="Reporting To"     value={emp.reportingTo ? `${emp.reportingTo.firstName} ${emp.reportingTo.lastName} (${emp.reportingTo.employeeId})` : null} delay={280} />
+                    <InfoCard icon={Activity}  label="Status"           value={sc.label} accent delay={320} />
                   </div>
                 </>
               ) : (

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import SocialLead from '@/models/SocialLead';
+import LeadRemark from '@/models/LeadRemark';
+import LeadTimeline from '@/models/LeadTimeline';
 import { withPermission } from '@/lib/permissions';
 import { applyStatusChange, canChangeStatus } from '@/lib/lead-status';
 import { writeAudit } from '@/lib/audit';
@@ -69,4 +71,30 @@ export const PATCH = withPermission('leads.social.edit', async (req, { params },
 
   await lead.save();
   return NextResponse.json(lead);
+});
+
+// ─── DELETE — admin only ──────────────────────────────────────────────────────
+export const DELETE = withPermission('leads.social.view', async (req, { params }, session) => {
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  }
+  await connectDB();
+  const lead = await SocialLead.findByIdAndDelete(params.id);
+  if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Clean up related records
+  await Promise.all([
+    LeadRemark.deleteMany({ lead_id: params.id }),
+    LeadTimeline.deleteMany({ lead_id: params.id }),
+  ]);
+
+  await writeAudit({
+    event_type: 'lead.deleted',
+    entity_type: 'lead_social',
+    entity_id: params.id,
+    actor_user_id: session.user.id,
+    metadata: { customer_id_url: lead.customer_id_url },
+  });
+
+  return NextResponse.json({ success: true });
 });

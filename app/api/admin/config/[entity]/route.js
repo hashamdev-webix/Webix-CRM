@@ -20,17 +20,29 @@ async function getModel(entity) {
 const VALID_ENTITIES = ['platforms', 'social_accounts', 'niches', 'email_accounts', 'phones', 'call_scripts', 'companies'];
 
 // ─── GET list ─────────────────────────────────────────────────────────────────
-export const GET = withPermission('admin.config.view', async (req, { params }) => {
+export const GET = withPermission('admin.config.view', async (req, { params }, session) => {
   if (!VALID_ENTITIES.includes(params.entity)) {
     return NextResponse.json({ error: 'Unknown entity' }, { status: 404 });
   }
   await connectDB();
   const Model = await getModel(params.entity);
 
-  let query = Model.find().sort({ createdAt: -1 });
+  const ASSIGNABLE = ['social_accounts', 'niches', 'email_accounts', 'phones'];
+  const isAdmin = session.user.role === 'admin';
+
+  // Non-admins only see items that are explicitly assigned to them
+  const filter = (ASSIGNABLE.includes(params.entity) && !isAdmin)
+    ? { assigned_users: session.user.id }
+    : {};
+
+  let query = Model.find(filter).sort({ createdAt: -1 });
   // Populate platform_id for social_accounts and call_scripts
   if (['social_accounts', 'call_scripts'].includes(params.entity)) {
     query = query.populate('platform_id', 'name type');
+  }
+  // Populate assigned_users for assignable entities (admin view only)
+  if (ASSIGNABLE.includes(params.entity) && isAdmin) {
+    query = query.populate('assigned_users', 'name email');
   }
   const items = await query.lean();
   return NextResponse.json(items);

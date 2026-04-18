@@ -5,6 +5,7 @@ const SendingEmailAccountSchema = new mongoose.Schema(
     label: { type: String, required: true, trim: true },
     email_address: { type: String, required: true, trim: true, lowercase: true },
     is_active: { type: Boolean, default: true, index: true },
+    assigned_users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

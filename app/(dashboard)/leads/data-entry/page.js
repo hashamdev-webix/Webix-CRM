@@ -15,7 +15,7 @@ import LeadStatusBadge from '@/components/leads/LeadStatusBadge';
 import LeadDetailDrawer from '@/components/leads/LeadDetailDrawer';
 import OutreachPanel from '@/components/leads/OutreachPanel';
 import OutreachStatusBadge from '@/components/leads/OutreachStatusBadge';
-import { Plus, Minus, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Plus, Minus, ChevronLeft, ChevronRight, Zap, Trash2, X } from 'lucide-react';
 import { usePermission } from '@/hooks/use-permission';
 import { PhoneInputField } from '@/components/ui/phone-input';
 
@@ -190,6 +190,8 @@ function ContactLeadList({ contactType, scope }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [companies, setCompanies] = useState([]);
+  const [checked, setChecked] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -199,6 +201,7 @@ function ContactLeadList({ contactType, scope }) {
 
   const fetchLeads = useCallback(async (p = 1) => {
     setLoading(true);
+    setChecked(new Set());
     try {
       const params = new URLSearchParams({ page: p, pageSize: 25, contact_type: contactType });
       if (statusFilter) params.set('status', statusFilter);
@@ -213,6 +216,46 @@ function ContactLeadList({ contactType, scope }) {
       setLoading(false);
     }
   }, [contactType, statusFilter, companyFilter, scope, canViewAll]);
+
+  const toggleCheck = (id) => setChecked((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const toggleAll = () => {
+    if (checked.size === leads.length) setChecked(new Set());
+    else setChecked(new Set(leads.map((l) => l._id)));
+  };
+
+  const deleteSelected = async () => {
+    if (!checked.size) return;
+    if (!confirm(`Delete ${checked.size} lead${checked.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await axios.delete('/api/leads/data-entry', { data: { ids: [...checked] } });
+      toast({ title: `${checked.size} lead${checked.size > 1 ? 's' : ''} deleted`, variant: 'success' });
+      fetchLeads(page);
+    } catch {
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deleteSingle = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this lead? This cannot be undone.')) return;
+    try {
+      await axios.delete(`/api/leads/data-entry/${id}`);
+      toast({ title: 'Lead deleted', variant: 'success' });
+      setLeads((prev) => prev.filter((l) => l._id !== id));
+      setChecked((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      setTotal((t) => t - 1);
+    } catch {
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
 
   useEffect(() => { fetchLeads(1); }, [fetchLeads]);
 
@@ -256,6 +299,17 @@ function ContactLeadList({ contactType, scope }) {
           </Select>
         )}
         <p className="text-sm text-gray-500 ml-2">{total} leads</p>
+        {isAdmin && checked.size > 0 && (
+          <Button size="sm" variant="destructive" onClick={deleteSelected} disabled={deleting} className="gap-1.5 ml-auto">
+            <Trash2 className="h-3.5 w-3.5" />
+            {deleting ? 'Deleting…' : `Delete ${checked.size} selected`}
+          </Button>
+        )}
+        {isAdmin && checked.size > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => setChecked(new Set())} className="gap-1 text-gray-400">
+            <X className="h-3.5 w-3.5" /> Clear
+          </Button>
+        )}
       </div>
 
       <Card className="overflow-hidden">
@@ -295,6 +349,16 @@ function ContactLeadList({ contactType, scope }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                {isAdmin && (
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 cursor-pointer"
+                      checked={leads.length > 0 && checked.size === leads.length}
+                      onChange={toggleAll}
+                    />
+                  </th>
+                )}
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Created By</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Business</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Category</th>
@@ -309,13 +373,27 @@ function ContactLeadList({ contactType, scope }) {
             </thead>
             <tbody className="divide-y">
               {loading ? Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 10 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: isAdmin ? 11 : 10 }).map((_, j) => (
                   <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td>
                 ))}</tr>
               )) : leads.length === 0 ? (
-                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-400">No leads found.</td></tr>
+                <tr><td colSpan={isAdmin ? 11 : 10} className="px-6 py-12 text-center text-gray-400">No leads found.</td></tr>
               ) : leads.map((lead) => (
-                <tr key={lead._id} className="hover:bg-blue-50/30 cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                <tr
+                  key={lead._id}
+                  className={`cursor-pointer transition-colors ${checked.has(lead._id) ? 'bg-red-50/40' : 'hover:bg-blue-50/30'}`}
+                  onClick={() => setSelectedLead(lead)}
+                >
+                  {isAdmin && (
+                    <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); toggleCheck(lead._id); }}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 cursor-pointer"
+                        checked={checked.has(lead._id)}
+                        onChange={() => toggleCheck(lead._id)}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-gray-700">{lead.created_by?.name || '—'}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{lead.business_name}</p>
@@ -338,11 +416,18 @@ function ContactLeadList({ contactType, scope }) {
                     {lead.last_remark?.remark_text || '—'}
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    {lead.status === 'new' && (
-                      <Button size="sm" variant="outline" onClick={(e) => handleStartOutreach(lead, e)}>
-                        <Zap className="h-3 w-3 mr-1" />Start
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {lead.status === 'new' && (
+                        <Button size="sm" variant="outline" onClick={(e) => handleStartOutreach(lead, e)}>
+                          <Zap className="h-3 w-3 mr-1" />Start
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 px-2" onClick={(e) => deleteSingle(lead._id, e)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

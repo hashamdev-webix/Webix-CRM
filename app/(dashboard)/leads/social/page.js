@@ -17,7 +17,7 @@ import LeadStatusBadge from '@/components/leads/LeadStatusBadge';
 import DuplicateUrlWarning from '@/components/leads/DuplicateUrlWarning';
 import LeadDetailDrawer from '@/components/leads/LeadDetailDrawer';
 import OutreachStatusBadge from '@/components/leads/OutreachStatusBadge';
-import { Search, Filter, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { Search, Filter, ChevronLeft, ChevronRight, ExternalLink, Trash2, X } from 'lucide-react';
 import { usePermission } from '@/hooks/use-permission';
 
 // ─── Add Lead Form ────────────────────────────────────────────────────────────
@@ -208,6 +208,8 @@ function LeadList() {
   const [showFilters, setShowFilters] = useState(false);
   const [platforms, setPlatforms] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [checked, setChecked] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     axios.get('/api/admin/config/platforms').then((r) => setPlatforms(r.data)).catch(() => {});
@@ -218,6 +220,7 @@ function LeadList() {
 
   const fetchLeads = useCallback(async (p = 1) => {
     setLoading(true);
+    setChecked(new Set());
     try {
       const params = new URLSearchParams({ page: p, pageSize: 25 });
       if (filters.status) params.set('status', filters.status);
@@ -233,6 +236,46 @@ function LeadList() {
       setLoading(false);
     }
   }, [filters, scope, canViewAll]);
+
+  const toggleCheck = (id) => setChecked((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const toggleAll = () => {
+    if (checked.size === leads.length) setChecked(new Set());
+    else setChecked(new Set(leads.map((l) => l._id)));
+  };
+
+  const deleteSelected = async () => {
+    if (!checked.size) return;
+    if (!confirm(`Delete ${checked.size} lead${checked.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await axios.delete('/api/leads/social', { data: { ids: [...checked] } });
+      toast({ title: `${checked.size} lead${checked.size > 1 ? 's' : ''} deleted`, variant: 'success' });
+      fetchLeads(page);
+    } catch {
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deleteSingle = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this lead? This cannot be undone.')) return;
+    try {
+      await axios.delete(`/api/leads/social/${id}`);
+      toast({ title: 'Lead deleted', variant: 'success' });
+      setLeads((prev) => prev.filter((l) => l._id !== id));
+      setChecked((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      setTotal((t) => t - 1);
+    } catch {
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
 
   useEffect(() => { fetchLeads(1); }, [fetchLeads]);
 
@@ -270,6 +313,17 @@ function LeadList() {
           <Filter className="h-4 w-4 mr-2" />
           Filters {Object.values(filters).filter(Boolean).length > 0 && `(${Object.values(filters).filter(Boolean).length})`}
         </Button>
+        {isAdmin && checked.size > 0 && (
+          <Button size="sm" variant="destructive" onClick={deleteSelected} disabled={deleting} className="gap-1.5">
+            <Trash2 className="h-3.5 w-3.5" />
+            {deleting ? 'Deleting…' : `Delete ${checked.size} selected`}
+          </Button>
+        )}
+        {isAdmin && checked.size > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => setChecked(new Set())} className="gap-1 text-gray-400">
+            <X className="h-3.5 w-3.5" /> Clear
+          </Button>
+        )}
       </div>
 
       {showFilters && (
@@ -339,20 +393,36 @@ function LeadList() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                {isAdmin && (
+                  <th className="px-4 py-3 w-10">
+                    <input type="checkbox" className="rounded border-gray-300 text-red-600 cursor-pointer"
+                      checked={leads.length > 0 && checked.size === leads.length}
+                      onChange={toggleAll} />
+                  </th>
+                )}
                 {['Created By', 'Platform', 'Account', 'Niche', 'URL', 'Status', 'Outreach', 'Owner', 'Created', 'Last Remark'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 font-medium text-gray-500 whitespace-nowrap">{h}</th>
                 ))}
+                {isAdmin && <th className="px-4 py-3 w-10" />}
               </tr>
             </thead>
             <tbody className="divide-y">
               {loading ? Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 10 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: isAdmin ? 12 : 10 }).map((_, j) => (
                   <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td>
                 ))}</tr>
               )) : leads.length === 0 ? (
-                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-400">No social leads found.</td></tr>
+                <tr><td colSpan={isAdmin ? 12 : 10} className="px-6 py-12 text-center text-gray-400">No social leads found.</td></tr>
               ) : leads.map((lead) => (
-                <tr key={lead._id} className="hover:bg-blue-50/30 cursor-pointer transition-colors" onClick={() => setSelectedLead(lead)}>
+                <tr key={lead._id}
+                  className={`hover:bg-blue-50/30 cursor-pointer transition-colors ${checked.has(lead._id) ? 'bg-red-50/40' : ''}`}
+                  onClick={() => setSelectedLead(lead)}>
+                  {isAdmin && (
+                    <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); toggleCheck(lead._id); }}>
+                      <input type="checkbox" className="rounded border-gray-300 text-red-600 cursor-pointer"
+                        checked={checked.has(lead._id)} onChange={() => {}} />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-gray-700">{lead.created_by?.name || '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{lead.platform_id?.name || '—'}</td>
                   <td className="px-4 py-3 text-gray-700">{lead.social_account_id?.account_name || '—'}</td>
@@ -372,6 +442,14 @@ function LeadList() {
                   <td className="px-4 py-3 text-gray-400 max-w-[160px] truncate">
                     {lead.last_remark?.remark_text || '—'}
                   </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={(e) => deleteSingle(lead._id, e)}
+                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
