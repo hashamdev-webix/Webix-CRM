@@ -30,6 +30,8 @@ function copyToClipboard(text, label) {
 // ─── Email Panel ──────────────────────────────────────────────────────────────
 function EmailPanel({ lead, leadType }) {
   const [emails, setEmails] = useState([]);
+  const [emailAccounts, setEmailAccounts] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState('');
   const [notes, setNotes] = useState('');
   const [logging, setLogging] = useState(false);
   const canSend = usePermission('outreach.email.send');
@@ -41,15 +43,30 @@ function EmailPanel({ lead, leadType }) {
     } catch {}
   }, [lead._id, leadType]);
 
-  useEffect(() => { fetchEmails(); }, [fetchEmails]);
+  useEffect(() => {
+    fetchEmails();
+    // Load email accounts assigned to this user
+    axios.get('/api/admin/config/email_accounts')
+      .then((r) => {
+        const active = r.data.filter((a) => a.is_active);
+        setEmailAccounts(active);
+        if (active.length === 1) setSelectedAccount(active[0]._id);
+      })
+      .catch(() => {});
+  }, [fetchEmails]);
 
   const handleLogEmail = async () => {
+    if (emailAccounts.length > 0 && !selectedAccount) {
+      toast({ title: 'Please select a sending email account', variant: 'destructive' });
+      return;
+    }
     setLogging(true);
     try {
       await axios.post('/api/outreach/email', {
         lead_id: lead._id,
         lead_type: leadType,
         message_body: notes.trim() || '(Manual outreach — no notes)',
+        sending_email_account_id: selectedAccount || null,
       });
       toast({ title: 'Email logged & follow-up scheduled', variant: 'success' });
       setNotes('');
@@ -62,34 +79,69 @@ function EmailPanel({ lead, leadType }) {
   };
 
   const email = lead.email_address;
+  const selectedAccountData = emailAccounts.find((a) => a._id === selectedAccount);
 
   return (
     <div className="space-y-4">
-      {/* Email address display */}
+      {/* Lead email address */}
       <div className="flex items-center gap-3 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
         <Mail className="h-5 w-5 text-indigo-500 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-500 mb-0.5">Email Address</p>
+          <p className="text-xs text-gray-500 mb-0.5">Lead Email Address</p>
           <p className="font-semibold text-gray-900 truncate">{email || 'No email on file'}</p>
         </div>
         {email && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => copyToClipboard(email, 'Email')}
-            className="flex-shrink-0"
-          >
-            <Copy className="h-3.5 w-3.5 mr-1" />
-            Copy
+          <Button size="sm" variant="outline" onClick={() => copyToClipboard(email, 'Email')} className="flex-shrink-0">
+            <Copy className="h-3.5 w-3.5 mr-1" />Copy
           </Button>
         )}
       </div>
+
+      {/* Sending account selector */}
+      {emailAccounts.length > 0 && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-600">Send From (Your Assigned Email)</Label>
+          <div className="space-y-1">
+            {emailAccounts.map((acc) => (
+              <button
+                key={acc._id}
+                onClick={() => setSelectedAccount(acc._id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                  selectedAccount === acc._id
+                    ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${selectedAccount === acc._id ? 'bg-indigo-200' : 'bg-gray-100'}`}>
+                  <Mail className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate">{acc.label}</p>
+                  <p className="text-xs text-gray-400 truncate">{acc.email_address}</p>
+                </div>
+                {selectedAccount === acc._id && <CheckCircle className="h-4 w-4 text-indigo-500 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+          {selectedAccountData && (
+            <p className="text-xs text-indigo-600 bg-indigo-50 rounded px-2 py-1">
+              Copy the lead email above → open <strong>{selectedAccountData.email_address}</strong> → send → log below
+            </p>
+          )}
+        </div>
+      )}
+
+      {emailAccounts.length === 0 && (
+        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          No email accounts assigned to you. Ask admin to assign one in Configuration.
+        </div>
+      )}
 
       {/* Log manual email */}
       {canSend && email && (
         <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-sm font-semibold text-gray-700">Log Email Sent</h3>
-          <p className="text-xs text-gray-500">Copy the email above, send it manually, then log it here to track outreach and schedule a follow-up.</p>
+          <p className="text-xs text-gray-500">After sending manually, log it here to track outreach and schedule a follow-up.</p>
           <div className="space-y-1">
             <Label className="text-xs">Notes (optional)</Label>
             <textarea
@@ -123,6 +175,12 @@ function EmailPanel({ lead, leadType }) {
               </div>
               <span className="text-xs text-gray-400">{formatDateTime(em.sent_at)}</span>
             </div>
+            {em.sending_email_account_id && (
+              <p className="text-xs text-indigo-600 pl-5 flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                from {em.sending_email_account_id.label} ({em.sending_email_account_id.email_address})
+              </p>
+            )}
             {em.message_body && em.message_body !== '(Manual outreach — no notes)' && (
               <p className="text-xs text-gray-500 pl-5">{em.message_body}</p>
             )}
@@ -137,6 +195,8 @@ function EmailPanel({ lead, leadType }) {
 // ─── Phone Panel ──────────────────────────────────────────────────────────────
 function PhonePanel({ lead, leadType }) {
   const [scripts, setScripts] = useState([]);
+  const [phones, setPhones] = useState([]);
+  const [selectedPhone, setSelectedPhone] = useState('');
   const [form, setForm] = useState({ script_id: '', outcome: '', notes: '' });
   const [selectedScript, setSelectedScript] = useState(null);
   const [logging, setLogging] = useState(false);
@@ -150,6 +210,14 @@ function PhonePanel({ lead, leadType }) {
     axios.get(`/api/outreach/call?lead_id=${lead._id}&lead_type=${leadType}`)
       .then((r) => setCalls(r.data))
       .catch(() => {});
+    // Load phone numbers assigned to this user
+    axios.get('/api/admin/config/phones')
+      .then((r) => {
+        const active = r.data.filter((p) => p.is_active);
+        setPhones(active);
+        if (active.length === 1) setSelectedPhone(active[0]._id);
+      })
+      .catch(() => {});
   }, [lead._id, leadType]);
 
   const handleScriptChange = (scriptId) => {
@@ -162,11 +230,16 @@ function PhonePanel({ lead, leadType }) {
       toast({ title: 'Please select a call outcome', variant: 'destructive' });
       return;
     }
+    if (phones.length > 0 && !selectedPhone) {
+      toast({ title: 'Please select a phone number to call from', variant: 'destructive' });
+      return;
+    }
     setLogging(true);
     try {
       const res = await axios.post('/api/outreach/call', {
         lead_id: lead._id,
         lead_type: leadType,
+        phone_option_id: selectedPhone || null,
         ...form,
       });
       toast({ title: 'Call logged', variant: 'success' });
@@ -184,25 +257,54 @@ function PhonePanel({ lead, leadType }) {
 
   return (
     <div className="space-y-4">
-      {/* Phone number display */}
+      {/* Lead phone number */}
       <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-lg border border-orange-100">
         <Phone className="h-5 w-5 text-orange-500 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-500 mb-0.5">Phone Number</p>
+          <p className="text-xs text-gray-500 mb-0.5">Lead Phone Number</p>
           <p className="font-semibold text-gray-900">{phone || 'No phone on file'}</p>
         </div>
         {phone && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => copyToClipboard(phone, 'Phone number')}
-            className="flex-shrink-0"
-          >
-            <Copy className="h-3.5 w-3.5 mr-1" />
-            Copy
+          <Button size="sm" variant="outline" onClick={() => copyToClipboard(phone, 'Phone number')} className="flex-shrink-0">
+            <Copy className="h-3.5 w-3.5 mr-1" />Copy
           </Button>
         )}
       </div>
+
+      {/* Assigned phone selector */}
+      {phones.length > 0 && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-600">Call From (Your Assigned Number)</Label>
+          <div className="space-y-1">
+            {phones.map((p) => (
+              <button
+                key={p._id}
+                onClick={() => setSelectedPhone(p._id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                  selectedPhone === p._id
+                    ? 'border-orange-400 bg-orange-50 text-orange-700'
+                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${selectedPhone === p._id ? 'bg-orange-200' : 'bg-gray-100'}`}>
+                  <Phone className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate">{p.label}</p>
+                  <p className="text-xs text-gray-400">{p.number} · {p.type}</p>
+                </div>
+                {selectedPhone === p._id && <CheckCircle className="h-4 w-4 text-orange-500 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {phones.length === 0 && (
+        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          No phone numbers assigned to you. Ask admin to assign one in Configuration.
+        </div>
+      )}
 
       {/* Log call */}
       {canLog && phone && (
@@ -268,10 +370,16 @@ function PhonePanel({ lead, leadType }) {
                 <Badge variant={call.outcome === 'interested' ? 'success' : call.outcome === 'not_interested' ? 'destructive' : 'secondary'} className="text-xs capitalize">
                   {call.outcome?.replace('_', ' ') || 'logged'}
                 </Badge>
-                <span className="text-xs text-gray-400">{formatDateTime(call.logged_at || call.createdAt)}</span>
+                <span className="text-xs text-gray-400">{formatDateTime(call.called_at || call.createdAt)}</span>
               </div>
+              {call.phone_option_id && (
+                <p className="text-xs text-orange-600 flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  via {call.phone_option_id.label} ({call.phone_option_id.number})
+                </p>
+              )}
               {call.notes && <p className="text-xs text-gray-500">{call.notes}</p>}
-              <p className="text-xs text-gray-400">by {call.logged_by?.name || 'Unknown'}</p>
+              <p className="text-xs text-gray-400">by {call.called_by?.name || 'Unknown'}</p>
             </div>
           ))}
         </div>

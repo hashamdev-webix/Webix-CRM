@@ -11,7 +11,7 @@ import { applyStatusChange } from '@/lib/lead-status';
 
 export const POST = withPermission('outreach.email.send', async (req, _ctx, session) => {
   await connectDB();
-  const { lead_id, lead_type, message_body } = await req.json();
+  const { lead_id, lead_type, message_body, sending_email_account_id } = await req.json();
 
   if (!lead_id || !lead_type || !message_body?.trim()) {
     return NextResponse.json({ error: 'lead_id, lead_type, message_body are required' }, { status: 400 });
@@ -28,6 +28,7 @@ export const POST = withPermission('outreach.email.send', async (req, _ctx, sess
     lead_id,
     lead_type,
     message_body,
+    sending_email_account_id: sending_email_account_id || null,
     sent_by: session.user.id,
     sent_at: now,
   });
@@ -87,6 +88,7 @@ export const GET = withPermission('leads.social.view', async (req) => {
 
   const emails = await OutreachEmail.find({ lead_id, lead_type })
     .populate('sent_by', 'name email')
+    .populate('sending_email_account_id', 'label email_address')
     .sort({ sent_at: -1 })
     .lean();
 
