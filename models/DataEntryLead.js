@@ -46,4 +46,10 @@ DataEntryLeadSchema.index({ owner_user_id: 1, status: 1 });
 
 DataEntryLeadSchema.statics.ALL_STATUSES = STATUSES;
 
+DataEntryLeadSchema.index({ status: 1, createdAt: -1 });
+DataEntryLeadSchema.index({ contact_type: 1, status: 1 });
+DataEntryLeadSchema.index({ created_by: 1, createdAt: -1 });
+DataEntryLeadSchema.index({ assigned_to: 1, status: 1 });
+DataEntryLeadSchema.index({ company_id: 1, createdAt: -1 });
+
 export default mongoose.models.DataEntryLead || mongoose.model('DataEntryLead', DataEntryLeadSchema);

@@ -32,4 +32,10 @@ SocialLeadSchema.index({ platform_id: 1, status: 1 });
 SocialLeadSchema.statics.LOCK_ON_STATUSES = LOCK_ON;
 SocialLeadSchema.statics.ALL_STATUSES = STATUSES;
 
+SocialLeadSchema.index({ status: 1, createdAt: -1 });
+SocialLeadSchema.index({ platform_id: 1, status: 1 });
+SocialLeadSchema.index({ created_by: 1, createdAt: -1 });
+SocialLeadSchema.index({ assigned_to: 1, status: 1 });
+SocialLeadSchema.index({ company_id: 1, createdAt: -1 });
+
 export default mongoose.models.SocialLead || mongoose.model('SocialLead', SocialLeadSchema);

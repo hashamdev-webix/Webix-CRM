@@ -113,4 +113,8 @@ EmployeeSchema.pre('save', async function (next) {
 });
 
 if (process.env.NODE_ENV === 'development') delete mongoose.models.Employee;
+EmployeeSchema.index({ status: 1 });
+EmployeeSchema.index({ department: 1, status: 1 });
+EmployeeSchema.index({ firstName: 1, lastName: 1 });
+
 export default mongoose.models.Employee || mongoose.model('Employee', EmployeeSchema);

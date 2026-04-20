@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, BarChart3, Settings, TrendingUp,
   LogOut, ChevronRight, X,
   Share2, Database, Clock, Shield, Cog, FileText,
-  UserSquare, Building2,
+  UserSquare, Building2, Wrench,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ const navItems = [
   { href: '/hr', label: 'HR Dashboard', icon: UserSquare, roles: ['admin', 'sales_member'], permission: 'hr.view' },
   { href: '/hr/employees', label: 'Employees', icon: Users, roles: ['admin', 'sales_member'], permission: 'hr.employees.view' },
   { href: '/hr/departments', label: 'Departments', icon: Building2, roles: ['admin', 'sales_member'], permission: 'hr.departments.manage' },
+  { href: '/hr/tools', label: 'Tools & Access', icon: Wrench, roles: ['admin', 'sales_member'], permission: 'hr.view' },
 
   // ─ Analytics
   { section: 'Analytics', roles: ['admin'] },
