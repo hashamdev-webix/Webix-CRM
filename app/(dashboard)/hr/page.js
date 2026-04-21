@@ -5,7 +5,8 @@ import axios from 'axios';
 import Link from 'next/link';
 import {
   Users, UserCheck, UserX, Clock, Building2, TrendingUp,
-  Plus, ArrowRight, Briefcase,
+  Plus, ArrowRight, Briefcase, DollarSign, CheckCircle2,
+  FileText, TrendingDown, Wallet,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -64,10 +65,11 @@ export default function HRDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const summary = stats?.summary || {};
-  const deptBreakdown = stats?.deptBreakdown || [];
-  const typeBreakdown = stats?.typeBreakdown || [];
-  const recentHires = stats?.recentHires || [];
+  const summary        = stats?.summary        || {};
+  const deptBreakdown  = stats?.deptBreakdown  || [];
+  const typeBreakdown  = stats?.typeBreakdown  || [];
+  const recentHires    = stats?.recentHires    || [];
+  const payroll        = stats?.payrollSummary || null;
 
   const summaryCards = [
     { label: 'Active Employees', value: summary.totalActive ?? 0, icon: UserCheck, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' },
@@ -96,6 +98,11 @@ export default function HRDashboardPage() {
           <Link href="/hr/departments">
             <Button size="sm" variant="outline">
               <Building2 className="h-4 w-4 mr-2" /> Manage Departments
+            </Button>
+          </Link>
+          <Link href="/hr/payroll">
+            <Button size="sm" variant="outline">
+              <DollarSign className="h-4 w-4 mr-2" /> Payroll
             </Button>
           </Link>
         </div>
@@ -194,6 +201,170 @@ export default function HRDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Payroll Summary ── */}
+        {(loading || payroll) && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-gray-400" />
+                Latest Payroll
+                {!loading && payroll && (
+                  <span className="text-xs font-normal text-gray-400 ml-1">
+                    {payroll.monthName} {payroll.year}
+                  </span>
+                )}
+              </h2>
+              <Link href="/hr/payroll">
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500 hover:text-gray-900">
+                  Open Payroll <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1,2,3,4].map(i => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
+              </div>
+            ) : !payroll ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <DollarSign className="h-10 w-10 mx-auto text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400 font-medium">No payroll records yet</p>
+                  <p className="text-xs text-gray-300 mt-1">Run your first payroll from the Payroll page</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* 4 metric cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  {/* Total Net Paid */}
+                  <Card className="border-0 bg-gradient-to-br from-gray-900 to-gray-800 text-white overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-red-600/10 rounded-bl-full" />
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Total Net Paid</p>
+                          <p className="text-xl font-bold text-white leading-tight">
+                            PKR {Number(payroll.totalNet).toLocaleString('en-PK')}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">{payroll.employeeCount} employees</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                          <Wallet className="h-4 w-4 text-green-400" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Total Earnings */}
+                  <Card className="border border-green-100 bg-green-50">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Total Earnings</p>
+                          <p className="text-xl font-bold text-green-800 leading-tight">
+                            PKR {Number(payroll.totalEarnings).toLocaleString('en-PK')}
+                          </p>
+                          <p className="text-xs text-green-500 mt-1">Basic + Allowances</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-lg bg-green-200 flex items-center justify-center flex-shrink-0">
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Total Deductions */}
+                  <Card className="border border-red-100 bg-red-50">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-2">Total Deductions</p>
+                          <p className="text-xl font-bold text-red-700 leading-tight">
+                            PKR {Number(payroll.totalDeductions).toLocaleString('en-PK')}
+                          </p>
+                          <p className="text-xs text-red-400 mt-1">Deductions + Absent</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-lg bg-red-200 flex items-center justify-center flex-shrink-0">
+                          <TrendingDown className="h-4 w-4 text-red-500" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Status */}
+                  <Card className={`border ${payroll.finalizedCount === payroll.employeeCount ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${payroll.finalizedCount === payroll.employeeCount ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            Status
+                          </p>
+                          <p className={`text-xl font-bold leading-tight ${payroll.finalizedCount === payroll.employeeCount ? 'text-emerald-800' : 'text-amber-700'}`}>
+                            {payroll.finalizedCount === payroll.employeeCount ? 'Finalized' : 'In Draft'}
+                          </p>
+                          <p className={`text-xs mt-1 ${payroll.finalizedCount === payroll.employeeCount ? 'text-emerald-500' : 'text-amber-500'}`}>
+                            {payroll.finalizedCount}/{payroll.employeeCount} finalized
+                          </p>
+                        </div>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${payroll.finalizedCount === payroll.employeeCount ? 'bg-emerald-200' : 'bg-amber-200'}`}>
+                          {payroll.finalizedCount === payroll.employeeCount
+                            ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            : <FileText className="h-4 w-4 text-amber-600" />
+                          }
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Department salary breakdown */}
+                {payroll.deptBreakdown?.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-gray-400" />
+                        Salary by Department — {payroll.monthName} {payroll.year}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {payroll.deptBreakdown.map((d, i) => {
+                          const pct = payroll.totalNet > 0 ? Math.round((d.totalNet / payroll.totalNet) * 100) : 0;
+                          const colors = ['bg-red-500','bg-blue-500','bg-green-500','bg-purple-500','bg-amber-500','bg-pink-500'];
+                          return (
+                            <div key={i}>
+                              <div className="flex items-center justify-between text-sm mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${colors[i % colors.length]}`} />
+                                  <span className="font-medium text-gray-700">{d.deptName || 'No Department'}</span>
+                                  <span className="text-xs text-gray-400">({d.count} emp)</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs text-gray-400">{pct}%</span>
+                                  <span className="font-semibold text-gray-800 tabular-nums">
+                                    PKR {Number(d.totalNet).toLocaleString('en-PK')}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full ${colors[i % colors.length]} rounded-full transition-all`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Recent Hires */}
         <Card>

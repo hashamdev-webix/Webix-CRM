@@ -42,12 +42,19 @@ export const GET = async (req) => {
     ];
   }
 
+  // Payroll / financial fields: only expose to users with financial permission
+  const canViewFinancial = hasPermission(session, 'hr.employees.financial') || session.user.role === 'admin';
+  const includeFinancial = canViewFinancial && searchParams.get('financial') === 'true';
+  const financialExclusion = includeFinancial
+    ? ''  // include all
+    : '-bankName -accountNumber -accountTitle -salary -salaryType -allowances -deductions';
+
   const skip = (page - 1) * limit;
   const [employees, total] = await Promise.all([
     Employee.find(filter)
       .populate('department', 'name code')
       .populate('reportingTo', 'firstName lastName employeeId')
-      .select('-bankName -accountNumber -accountTitle -salary -salaryType -allowances -deductions')
+      .select(financialExclusion ? financialExclusion : undefined)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
