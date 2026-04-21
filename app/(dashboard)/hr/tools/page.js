@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -844,13 +845,13 @@ function DashboardPanel() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ToolsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const isAdmin = session?.user?.role === 'admin';
   const [tools, setTools] = useState([]);
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('directory');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [selectedTool, setSelectedTool] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -899,7 +900,7 @@ export default function ToolsPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Main Content */}
-      <div className={`flex flex-col flex-1 overflow-hidden transition-all ${(showAddForm || selectedTool) ? 'mr-[480px]' : ''}`}>
+      <div className={`flex flex-col flex-1 overflow-hidden transition-all ${selectedTool ? 'mr-[480px]' : ''}`}>
         <Header title="Tools & Access Management" subtitle="Track all software subscriptions, credentials, and team access" />
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
 
@@ -914,7 +915,7 @@ export default function ToolsPage() {
               ))}
             </div>
             {isAdmin && activeTab === 'directory' && (
-              <Button size="sm" onClick={() => { setShowAddForm(true); setSelectedTool(null); }} className="bg-red-600 hover:bg-red-700 text-white">
+              <Button size="sm" onClick={() => router.push('/hr/tools/new')} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" /> Add Tool
               </Button>
             )}
@@ -972,7 +973,7 @@ export default function ToolsPage() {
                         const catColor = tool.category_id?.color || '#6366f1';
                         return (
                           <tr key={tool._id} className={`cursor-pointer transition-colors hover:bg-gray-50 ${getRowBg(tool.daysLeft, tool.status)}`}
-                            onClick={() => { setSelectedTool(tool); setShowAddForm(false); }}>
+                            onClick={() => { setSelectedTool(tool); }}>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: catColor }} />
@@ -1003,7 +1004,7 @@ export default function ToolsPage() {
                             <td className="px-4 py-3 hidden lg:table-cell text-gray-600">{tool.primary_owner?.name || '—'}</td>
                             <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                               <div className="flex items-center gap-1">
-                                <Button size="sm" variant="ghost" className="h-7 px-2 text-gray-400 hover:text-blue-600" onClick={() => { setSelectedTool(tool); setShowAddForm(false); }}>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-gray-400 hover:text-blue-600" onClick={() => { setSelectedTool(tool); }}>
                                   <ChevronRight className="h-4 w-4" />
                                 </Button>
                                 {isAdmin && (
@@ -1026,26 +1027,16 @@ export default function ToolsPage() {
       </div>
 
       {/* Right Drawer Panel */}
-      {(showAddForm || selectedTool) && (
+      {selectedTool && (
         <div className="fixed right-0 top-0 h-full w-[480px] bg-white border-l shadow-2xl z-30 flex flex-col">
-          {showAddForm && (
-            <ToolForm
-              categories={categories}
-              users={users}
-              onSuccess={() => { setShowAddForm(false); fetchTools(); }}
-              onClose={() => setShowAddForm(false)}
-            />
-          )}
-          {selectedTool && !showAddForm && (
-            <ToolDetailDrawer
-              tool={selectedTool}
-              isAdmin={isAdmin}
-              users={users}
-              categories={categories}
-              onClose={() => setSelectedTool(null)}
-              onRefresh={() => { fetchTools(); }}
-            />
-          )}
+          <ToolDetailDrawer
+            tool={selectedTool}
+            isAdmin={isAdmin}
+            users={users}
+            categories={categories}
+            onClose={() => setSelectedTool(null)}
+            onRefresh={() => { fetchTools(); }}
+          />
         </div>
       )}
     </div>

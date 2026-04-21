@@ -35,16 +35,35 @@ export const GET = withPermission('leads.dataentry.view', async (req, _ctx, sess
     ];
   }
 
+  // Search
+  const search = searchParams.get('search')?.trim();
+  if (search) {
+    filter.$and = filter.$and || [];
+    filter.$and.push({
+      $or: [
+        { business_name: { $regex: search, $options: 'i' } },
+        { owner_name: { $regex: search, $options: 'i' } },
+        { phone_number: { $regex: search, $options: 'i' } },
+        { email_address: { $regex: search, $options: 'i' } },
+      ],
+    });
+  }
+
   // Filters
   const contactType = searchParams.get('contact_type');
   if (contactType) filter.contact_type = contactType;
   if (searchParams.get('status')) filter.status = searchParams.get('status');
   if (searchParams.get('company')) filter.company_id = searchParams.get('company');
   if (searchParams.get('assignedTo')) filter.assigned_to = searchParams.get('assignedTo');
+  if (searchParams.get('createdBy')) filter.created_by = searchParams.get('createdBy');
   if (searchParams.get('startDate') || searchParams.get('endDate')) {
     filter.createdAt = {};
     if (searchParams.get('startDate')) filter.createdAt.$gte = new Date(searchParams.get('startDate'));
-    if (searchParams.get('endDate')) filter.createdAt.$lte = new Date(searchParams.get('endDate'));
+    if (searchParams.get('endDate')) {
+      const end = new Date(searchParams.get('endDate'));
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = end;
+    }
   }
 
   const [total, leads] = await Promise.all([

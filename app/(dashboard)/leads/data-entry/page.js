@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import Header from '@/components/layout/Header';
@@ -14,8 +14,88 @@ import { formatDate } from '@/lib/utils';
 import LeadStatusBadge from '@/components/leads/LeadStatusBadge';
 import LeadDetailDrawer from '@/components/leads/LeadDetailDrawer';
 import OutreachPanel from '@/components/leads/OutreachPanel';
-import OutreachStatusBadge from '@/components/leads/OutreachStatusBadge';
-import { Plus, Minus, ChevronLeft, ChevronRight, Zap, Trash2, X } from 'lucide-react';
+import { Plus, Minus, ChevronLeft, ChevronRight, Zap, Trash2, X, UserPlus, CalendarDays, Filter, Search } from 'lucide-react';
+
+// ── Assign Popover ─────────────────────────────────────────────────────────────
+function AssignPopover({ lead, users, onAssigned }) {
+  const [open, setOpen]     = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
+  const wrapRef = useRef(null);
+  const btnRef  = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleOpen = (e) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setOpenUp(window.innerHeight - rect.bottom < 220);
+    }
+    setOpen(o => !o);
+  };
+
+  const assign = async (userId) => {
+    setSaving(true);
+    try {
+      const res = await axios.patch(`/api/leads/data-entry/${lead._id}`, { assigned_to: userId || null });
+      onAssigned(res.data);
+      setOpen(false);
+      toast({ title: userId ? 'Lead assigned' : 'Assignment removed', variant: 'success' });
+    } catch { toast({ title: 'Failed to assign', variant: 'destructive' }); }
+    finally { setSaving(false); }
+  };
+
+  const assignedId = lead.assigned_to?._id || lead.assigned_to;
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button ref={btnRef} onClick={handleOpen}
+        className={`p-1.5 rounded-lg transition-colors ${open ? 'text-blue-500 bg-blue-50' : 'text-gray-300 hover:text-blue-500 hover:bg-blue-50'}`}
+        title="Assign lead">
+        <UserPlus className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <div
+          onClick={e => e.stopPropagation()}
+          className={`absolute right-0 z-[999] bg-white border border-gray-200 rounded-xl shadow-2xl w-52 py-1.5 text-sm
+            ${openUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+        >
+          <p className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 mb-1">
+            Assign to
+          </p>
+          {assignedId && (
+            <button onClick={() => assign(null)} disabled={saving}
+              className="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 text-xs flex items-center gap-2">
+              <X className="h-3 w-3" /> Remove assignment
+            </button>
+          )}
+          {users.map(u => {
+            const isAssigned = assignedId?.toString() === u._id?.toString();
+            return (
+              <button key={u._id} onClick={() => assign(u._id)} disabled={saving}
+                className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors
+                  ${isAssigned ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>
+                <span className="w-6 h-6 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">
+                  {u.name?.[0]?.toUpperCase()}
+                </span>
+                <span className="truncate">{u.name}</span>
+                {isAssigned && <span className="ml-auto text-blue-400 text-[10px]">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 import { usePermission } from '@/hooks/use-permission';
 import { PhoneInputField } from '@/components/ui/phone-input';
 
@@ -187,15 +267,18 @@ function ContactLeadList({ contactType, scope }) {
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [companyFilter, setCompanyFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({ status: '', company: '', createdBy: '', startDate: '', endDate: '' });
+  const [showFilters, setShowFilters] = useState(false);
   const [companies, setCompanies] = useState([]);
+  const [users, setUsers] = useState([]);
   const [checked, setChecked] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
       axios.get('/api/admin/config/companies').then((r) => setCompanies(r.data.filter((c) => c.is_active))).catch(() => {});
+      axios.get('/api/users').then((r) => setUsers(Array.isArray(r.data) ? r.data : r.data?.users || [])).catch(() => {});
     }
   }, [isAdmin]);
 
@@ -204,8 +287,12 @@ function ContactLeadList({ contactType, scope }) {
     setChecked(new Set());
     try {
       const params = new URLSearchParams({ page: p, pageSize: 25, contact_type: contactType });
-      if (statusFilter) params.set('status', statusFilter);
-      if (companyFilter) params.set('company', companyFilter);
+      if (search)          params.set('search', search);
+      if (filters.status)  params.set('status', filters.status);
+      if (filters.company) params.set('company', filters.company);
+      if (filters.createdBy) params.set('createdBy', filters.createdBy);
+      if (filters.startDate) params.set('startDate', filters.startDate);
+      if (filters.endDate)   params.set('endDate', filters.endDate);
       if (canViewAll && scope === 'mine') params.set('mine', 'true');
       const res = await axios.get(`/api/leads/data-entry?${params}`);
       setLeads(res.data.leads);
@@ -215,7 +302,7 @@ function ContactLeadList({ contactType, scope }) {
     } finally {
       setLoading(false);
     }
-  }, [contactType, statusFilter, companyFilter, scope, canViewAll]);
+  }, [contactType, search, filters, scope, canViewAll]);
 
   const toggleCheck = (id) => setChecked((prev) => {
     const next = new Set(prev);
@@ -275,30 +362,21 @@ function ContactLeadList({ contactType, scope }) {
     setSelectedLead(updated);
   };
 
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
-          <SelectTrigger className="h-9 w-44">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {isAdmin && companies.length > 0 && (
-          <Select value={companyFilter} onValueChange={(v) => setCompanyFilter(v === 'all' ? '' : v)}>
-            <SelectTrigger className="h-9 w-44">
-              <SelectValue placeholder="All companies" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All companies</SelectItem>
-              {companies.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-        <p className="text-sm text-gray-500 ml-2">{total} leads</p>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input placeholder="Search leads…" className="pl-9 h-9 w-52"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+          <Filter className="h-4 w-4 mr-2" />
+          Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+        </Button>
+        <p className="text-sm text-gray-500">{total} leads</p>
         {isAdmin && checked.size > 0 && (
           <Button size="sm" variant="destructive" onClick={deleteSelected} disabled={deleting} className="gap-1.5 ml-auto">
             <Trash2 className="h-3.5 w-3.5" />
@@ -311,6 +389,68 @@ function ContactLeadList({ contactType, scope }) {
           </Button>
         )}
       </div>
+
+      {showFilters && (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={filters.status || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, status: v === 'all' ? '' : v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="All statuses" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {isAdmin && users.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Created By</Label>
+                  <Select value={filters.createdBy || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, createdBy: v === 'all' ? '' : v }))}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="All members" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All members</SelectItem>
+                      {users.map((u) => <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {isAdmin && companies.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Company</Label>
+                  <Select value={filters.company || 'all'} onValueChange={(v) => setFilters(f => ({ ...f, company: v === 'all' ? '' : v }))}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="All companies" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All companies</SelectItem>
+                      {companies.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <CalendarDays className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <div className="space-y-1">
+                <Label className="text-xs">From Date</Label>
+                <Input type="date" className="h-9 w-40" value={filters.startDate}
+                  onChange={(e) => setFilters(f => ({ ...f, startDate: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">To Date</Label>
+                <Input type="date" className="h-9 w-40" value={filters.endDate}
+                  onChange={(e) => setFilters(f => ({ ...f, endDate: e.target.value }))} />
+              </div>
+              {(activeFilterCount > 0 || search) && (
+                <Button variant="ghost" size="sm" className="text-xs text-gray-400 mt-4"
+                  onClick={() => { setFilters({ status: '', company: '', createdBy: '', startDate: '', endDate: '' }); setSearch(''); }}>
+                  <X className="h-3.5 w-3.5 mr-1" /> Clear all
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         {/* Mobile cards */}
@@ -326,7 +466,7 @@ function ContactLeadList({ contactType, scope }) {
                 </div>
                 <LeadStatusBadge status={lead.status} />
               </div>
-              <div className="mt-1.5"><OutreachStatusBadge outreach={lead.outreach} /></div>
+              {lead.assigned_to && <p className="text-xs text-blue-500 mt-1">Assigned: {lead.assigned_to.name}</p>}
               <div className="flex items-center gap-3 mt-2">
                 {(contactType === 'email' || contactType === 'both') && lead.email_address && (
                   <p className="text-xs text-gray-600">{lead.email_address}</p>
@@ -365,19 +505,18 @@ function ContactLeadList({ contactType, scope }) {
                 <th className="text-left px-4 py-3 font-medium text-gray-500">City</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Contact</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Outreach</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500">Assigned To</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Last Remark</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {loading ? Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: isAdmin ? 11 : 10 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: isAdmin ? 10 : 9 }).map((_, j) => (
                   <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td>
                 ))}</tr>
               )) : leads.length === 0 ? (
-                <tr><td colSpan={isAdmin ? 11 : 10} className="px-6 py-12 text-center text-gray-400">No leads found.</td></tr>
+                <tr><td colSpan={isAdmin ? 10 : 9} className="px-6 py-12 text-center text-gray-400">No leads found.</td></tr>
               ) : leads.map((lead) => (
                 <tr
                   key={lead._id}
@@ -410,22 +549,28 @@ function ContactLeadList({ contactType, scope }) {
                     )}
                   </td>
                   <td className="px-4 py-3"><LeadStatusBadge status={lead.status} /></td>
-                  <td className="px-4 py-3"><OutreachStatusBadge outreach={lead.outreach} /></td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(lead.createdAt)}</td>
-                  <td className="px-4 py-3 text-gray-400 max-w-[120px] truncate">
-                    {lead.last_remark?.remark_text || '—'}
+                  <td className="px-4 py-3">
+                    {lead.assigned_to
+                      ? <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{lead.assigned_to.name}</span>
+                      : <span className="text-gray-300 text-xs">Unassigned</span>
+                    }
                   </td>
+                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(lead.createdAt)}</td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       {lead.status === 'new' && (
-                        <Button size="sm" variant="outline" onClick={(e) => handleStartOutreach(lead, e)}>
+                        <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={(e) => handleStartOutreach(lead, e)}>
                           <Zap className="h-3 w-3 mr-1" />Start
                         </Button>
                       )}
                       {isAdmin && (
-                        <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 px-2" onClick={(e) => deleteSingle(lead._id, e)}>
+                        <AssignPopover lead={lead} users={users}
+                          onAssigned={(updated) => setLeads(prev => prev.map(l => l._id === updated._id ? { ...l, ...updated } : l))} />
+                      )}
+                      {isAdmin && (
+                        <button className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" onClick={(e) => deleteSingle(lead._id, e)}>
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </td>

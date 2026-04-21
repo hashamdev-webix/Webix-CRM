@@ -40,16 +40,27 @@ export const GET = withPermission('leads.social.view', async (req, _ctx, session
     ];
   }
 
+  // Search
+  const search = searchParams.get('search')?.trim();
+  if (search) {
+    filter.customer_id_url = { $regex: search, $options: 'i' };
+  }
+
   // Filters from query params
   if (searchParams.get('status')) filter.status = searchParams.get('status');
   if (searchParams.get('platform')) filter.platform_id = searchParams.get('platform');
   if (searchParams.get('company')) filter.company_id = searchParams.get('company');
   if (searchParams.get('niche')) filter.target_niche_id = searchParams.get('niche');
   if (searchParams.get('assignedTo')) filter.assigned_to = searchParams.get('assignedTo');
+  if (searchParams.get('createdBy')) filter.created_by = searchParams.get('createdBy');
   if (searchParams.get('startDate') || searchParams.get('endDate')) {
     filter.createdAt = {};
     if (searchParams.get('startDate')) filter.createdAt.$gte = new Date(searchParams.get('startDate'));
-    if (searchParams.get('endDate')) filter.createdAt.$lte = new Date(searchParams.get('endDate'));
+    if (searchParams.get('endDate')) {
+      const end = new Date(searchParams.get('endDate'));
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = end;
+    }
   }
 
   const [total, leads] = await Promise.all([
