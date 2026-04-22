@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Client from '@/models/Client';
 import ClientPayment from '@/models/ClientPayment';
+import '@/models/Department';
+import '@/models/Employee';
 import { withPermission } from '@/lib/permissions';
 import { writeAudit } from '@/lib/audit';
 import mongoose from 'mongoose';

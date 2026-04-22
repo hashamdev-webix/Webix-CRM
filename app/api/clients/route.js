@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb';
 import Client from '@/models/Client';
 import ClientPayment from '@/models/ClientPayment';
 import '@/models/Company';
+import '@/models/Department';
+import '@/models/Employee';
 import { withPermission } from '@/lib/permissions';
 import { writeAudit } from '@/lib/audit';
 
