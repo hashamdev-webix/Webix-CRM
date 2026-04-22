@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, BarChart3, Settings, TrendingUp,
   LogOut, ChevronRight, X,
   Share2, Database, Clock, Shield, Cog, FileText,
-  UserSquare, Building2, Wrench, DollarSign,
+  UserSquare, Building2, Wrench, DollarSign, Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,10 @@ const navItems = [
   { href: '/leads/social', label: 'Social Leads', icon: Share2, roles: ['admin', 'sales_member'] },
   { href: '/leads/data-entry', label: 'Data Entry Leads', icon: Database, roles: ['admin', 'sales_member'] },
   { href: '/leads/follow-ups', label: 'Follow-ups', icon: Clock, roles: ['admin', 'sales_member'] },
+
+  // ─ Clients
+  { section: 'Clients', roles: ['admin', 'sales_member'] },
+  { href: '/clients', label: 'All Clients', icon: Briefcase, roles: ['admin', 'sales_member'] },
 
   // ─ HR
   { section: 'HR & People', roles: ['admin', 'sales_member'], permission: 'hr.view' },
