@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, BarChart3, Settings, TrendingUp,
   LogOut, ChevronRight, X,
   Share2, Database, Clock, Shield, Cog, FileText,
-  UserSquare, Building2, Wrench, DollarSign, Briefcase,
+  UserSquare, Building2, Wrench, DollarSign, Briefcase, PieChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ const navItems = [
 
   // ─ Analytics
   { section: 'Analytics', roles: ['admin'] },
+  { href: '/business-dashboard', label: 'Business Dashboard', icon: PieChart, roles: ['admin'] },
   { href: '/ad-performance', label: 'Ad Performance', icon: TrendingUp, roles: ['admin'] },
   { href: '/admin/reports', label: 'Reports', icon: FileText, roles: ['admin'] },
  
